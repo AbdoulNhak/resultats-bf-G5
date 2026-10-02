@@ -1,0 +1,9 @@
+# Fins de ligne LF partout : un script CRLF échoue dans la VM (piège n°5)
+* text=auto eol=lf
+*.sh  text eol=lf
+*.py  text eol=lf
+*.sql text eol=lf
+Vagrantfile text eol=lf
+*.png binary
+*.pdf binary
+*.docx binary

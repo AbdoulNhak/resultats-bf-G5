@@ -1,0 +1,7 @@
+# Secrets (R7) : seul .env.exemple est versionné
+.env
+# État local de Vagrant
+.vagrant/
+*.log
+# Engendré à chaque commande vagrant depuis le Vagrantfile
+config/noeuds.yml
