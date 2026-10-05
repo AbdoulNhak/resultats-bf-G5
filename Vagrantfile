@@ -60,7 +60,7 @@ AVEC_LB2 = parametre("AVEC_LB2", "0") == "1"      # extension E1
 AVEC_OBS = parametre("AVEC_OBS", "0") == "1"      # extension E2
 RESEAU   = "192.168.#{55 + GROUPE}"
 BOITE    = "bento/ubuntu-24.04"
-VERSION  = "202404.23.0"   # TODO rôle A : vérifier que cette version existe et l'épingler pour tous
+VERSION  = "202510.26.0"   # TODO rôle A : vérifier que cette version existe et l'épingler pour tous
 
 abort "NB_APP doit être compris entre 2 et 9 (reçu : #{NB_APP})" unless (2..9).cover?(NB_APP)
 

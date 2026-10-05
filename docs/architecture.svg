@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 640" font-family="DejaVu Sans, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="fl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#455a64"/>
+    </marker>
+    <marker id="flb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#1e88c8"/>
+    </marker>
+    <marker id="flg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#8e24aa"/>
+    </marker>
+  </defs>
+  <rect width="920" height="640" fill="#ffffff"/>
+
+  <!-- Titre -->
+  <text x="24" y="32" font-size="18" font-weight="bold" fill="#263238">RÉSULTATS-BF — architecture cible (groupe 5)</text>
+  <text x="24" y="52" font-size="12" fill="#607d8b">Traits pleins : socle obligatoire · traits pointillés : extensions E1 et E2</text>
+
+  <!-- Hôte -->
+  <rect x="330" y="70" width="260" height="54" rx="8" fill="#eceff1" stroke="#455a64" stroke-width="1.3"/>
+  <text x="460" y="93" text-anchor="middle" font-weight="bold" fill="#263238">Poste hôte / client</text>
+  <text x="460" y="112" text-anchor="middle" font-size="11.5" fill="#455a64">navigateur, curl, ab</text>
+
+  <!-- Réseau privé -->
+  <rect x="20" y="160" width="880" height="460" rx="12" fill="#f8fbfd" stroke="#90a4ae" stroke-width="1.2" stroke-dasharray="6 5"/>
+  <text x="36" y="182" font-size="12" font-weight="bold" fill="#546e7a">Réseau privé hôte-seul 192.168.60.0/24</text>
+
+  <!-- Flux hôte -> lb -->
+  <path d="M430 124 V196" stroke="#455a64" stroke-width="1.4" fill="none" marker-end="url(#fl)"/>
+  <text x="420" y="146" text-anchor="end" font-size="11.5" fill="#455a64">localhost:8080 → lb1:80</text>
+  <path d="M520 124 V150 H560 V180" stroke="#1e88c8" stroke-width="1.4" fill="none" stroke-dasharray="5 4" marker-end="url(#flb)"/>
+  <text x="572" y="146" font-size="11.5" fill="#1e88c8">IP virtuelle 192.168.60.10:80 (E1)</text>
+
+  <!-- LB -->
+  <rect x="300" y="198" width="200" height="60" rx="8" fill="#e3f2fd" stroke="#1e88c8" stroke-width="2"/>
+  <text x="400" y="222" text-anchor="middle" font-weight="bold" fill="#263238">lb1 · HAProxy actif</text>
+  <text x="400" y="242" text-anchor="middle" font-size="11.5" fill="#455a64">.11 · 512 Mo · seul port exposé</text>
+
+  <rect x="540" y="198" width="200" height="60" rx="8" fill="#ffffff" stroke="#1e88c8" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="640" y="222" text-anchor="middle" font-weight="bold" fill="#263238">lb2 · HAProxy passif</text>
+  <text x="640" y="242" text-anchor="middle" font-size="11.5" fill="#455a64">.12 · keepalived (E1)</text>
+  <path d="M500 228 H540" stroke="#1e88c8" stroke-width="1.3" stroke-dasharray="4 3" fill="none"/>
+  <text x="520" y="221" text-anchor="middle" font-size="11" fill="#1e88c8">VRRP</text>
+
+  <!-- LB -> apps -->
+  <path d="M400 258 V300 H150 V330" stroke="#455a64" stroke-width="1.3" fill="none" marker-end="url(#fl)"/>
+  <path d="M400 258 V330" stroke="#455a64" stroke-width="1.3" fill="none" marker-end="url(#fl)"/>
+  <path d="M400 300 H650 V330" stroke="#455a64" stroke-width="1.3" fill="none" marker-end="url(#fl)"/>
+  <text x="412" y="292" font-size="11.5" fill="#455a64">HTTP :5000 · round-robin · sonde GET /sante (1 s)</text>
+
+  <!-- Apps -->
+  <rect x="60" y="332" width="180" height="60" rx="8" fill="#e8f5e9" stroke="#2e8b3e" stroke-width="1.5"/>
+  <text x="150" y="356" text-anchor="middle" font-weight="bold" fill="#263238">app1 · Flask + gunicorn</text>
+  <text x="150" y="376" text-anchor="middle" font-size="11.5" fill="#455a64">.21 · 512 Mo · sans état</text>
+  <rect x="310" y="332" width="180" height="60" rx="8" fill="#e8f5e9" stroke="#2e8b3e" stroke-width="1.5"/>
+  <text x="400" y="356" text-anchor="middle" font-weight="bold" fill="#263238">app2 · Flask + gunicorn</text>
+  <text x="400" y="376" text-anchor="middle" font-size="11.5" fill="#455a64">.22 · 512 Mo · sans état</text>
+  <rect x="560" y="332" width="180" height="60" rx="8" fill="#ffffff" stroke="#2e8b3e" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="650" y="356" text-anchor="middle" font-weight="bold" fill="#263238">app3 … appN</text>
+  <text x="650" y="376" text-anchor="middle" font-size="11.5" fill="#455a64">.23 … · NB_APP=N</text>
+
+  <!-- Apps -> BDD -->
+  <path d="M150 392 V440 H330 V470" stroke="#455a64" stroke-width="1.3" fill="none" marker-end="url(#fl)"/>
+  <path d="M400 392 V440" stroke="#455a64" stroke-width="1.3" fill="none"/>
+  <path d="M650 392 V440 H330" stroke="#455a64" stroke-width="1.3" fill="none"/>
+  <text x="452" y="462" font-size="11.5" fill="#455a64">SQL :5432 · hôtes « bdd1,bdd2 », read-write</text>
+
+  <!-- BDD -->
+  <rect x="220" y="472" width="220" height="64" rx="8" fill="#fff3e0" stroke="#d98e2b" stroke-width="2"/>
+  <text x="330" y="497" text-anchor="middle" font-weight="bold" fill="#263238">bdd1 · PostgreSQL primaire</text>
+  <text x="330" y="518" text-anchor="middle" font-size="11.5" fill="#455a64">.31 · 768 Mo · lecture/écriture</text>
+  <rect x="520" y="472" width="220" height="64" rx="8" fill="#fff3e0" stroke="#d98e2b" stroke-width="1.5"/>
+  <text x="630" y="497" text-anchor="middle" font-weight="bold" fill="#263238">bdd2 · réplique en flux</text>
+  <text x="630" y="518" text-anchor="middle" font-size="11.5" fill="#455a64">.32 · 768 Mo · promouvable</text>
+  <path d="M440 504 H518" stroke="#d98e2b" stroke-width="1.6" fill="none" marker-end="url(#fl)"/>
+  <text x="479" y="496" text-anchor="middle" font-size="11" fill="#b26a00">WAL</text>
+  <text x="630" y="556" text-anchor="middle" font-size="11" fill="#b26a00">bascule : scripts/bascule.sh (pg_promote)</text>
+
+  <!-- Obs -->
+  <rect x="770" y="332" width="116" height="78" rx="8" fill="#ffffff" stroke="#8e24aa" stroke-width="1.4" stroke-dasharray="6 4"/>
+  <text x="828" y="355" text-anchor="middle" font-weight="bold" fill="#263238">obs (E2)</text>
+  <text x="828" y="374" text-anchor="middle" font-size="11" fill="#455a64">Prometheus</text>
+  <text x="828" y="390" text-anchor="middle" font-size="11" fill="#455a64">Grafana :3000</text>
+  <text x="828" y="404" text-anchor="middle" font-size="11" fill="#455a64">.41 · 768 Mo</text>
+  <path d="M828 332 V228 H742" stroke="#8e24aa" stroke-width="1.2" stroke-dasharray="4 3" fill="none" marker-end="url(#flg)"/>
+  <text x="836" y="290" font-size="11" fill="#8e24aa">métriques</text>
+  <text x="836" y="304" font-size="11" fill="#8e24aa">de toutes</text>
+  <text x="836" y="318" font-size="11" fill="#8e24aa">les VM</text>
+
+  <!-- Légende -->
+  <text x="36" y="600" font-size="11.5" fill="#546e7a">Toutes les adresses et la configuration HAProxy sont engendrées depuis la table NOEUDS du Vagrantfile (config/noeuds.yml).</text>
+</svg>
