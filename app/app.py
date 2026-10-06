@@ -19,8 +19,15 @@ from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 HOTE = socket.gethostname()
-MATRICULE_VALIDE = re.compile(r"^[A-Z]{2}[0-9]{6}$")
+# socket permet de récupérer le nom du conteneur qui exécute Flask, qui est unique dans le cluster Vagrant
 
+MATRICULE_VALIDE = re.compile(r"^[A-Z]{2}[0-9]{6}$")
+#regex pour valider le matricule (2 lettres + 6 lettres et chiffres)
+# format attendu : BF000123
+
+# PG_HOSTS est une liste de serveurs séparés par des virgules, par exemple :
+# PG_HOSTS=bdd1,bdd2
+# configuration de la réplication PostgreSQL : bdd1 est le maître, bdd2 est le réplica
 _hotes = os.environ["PG_HOSTS"].split(",")
 DSN = (
     f"host={','.join(_hotes)} "
@@ -82,6 +89,7 @@ def sante():
 def info():
     return jsonify(serveur=HOTE), 200
 
+# gestion des erreurs : renvoie toujours un JSON, jamais de page blanche ni d'erreur brute
 
 @app.errorhandler(404)
 def introuvable(_):

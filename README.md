@@ -11,7 +11,7 @@ Master 1 Informatique — Virtualisation et Cloud Computing — Dr SOMDA — IBA
 | Outil | Version testée | Remarque |
 |---|---|---|
 | VirtualBox | 7.x | Réseau hôte-seul 192.168.56.0/21 autorisé par défaut |
-| Vagrant | 2.4.x | |
+| Vagrant | 2.4.x | Version compatible avec votre VirtualBox |
 | Git | 2.x | Sous Windows : Git Bash pour lancer les scripts de test |
 | Mémoire libre | 3 Go (socle) | 8 Go de RAM sur le poste conseillés |
 
@@ -25,8 +25,12 @@ cd resultats-bf
 vagrant up
 ```
 
-Au premier `vagrant up`, le fichier `.env` est créé automatiquement avec des mots
-de passe aléatoires (voir `.env.exemple`). Aucune autre action n'est nécessaire.
+Au premier `vagrant up` :
+
+- la boîte `bento/ubuntu-24.04` est téléchargée une seule fois (environ 1 Go), puis gardée en cache ;
+- le fichier `.env` est créé automatiquement avec des mots de passe aléatoires (voir `.env.exemple`).
+
+Aucune autre action n'est nécessaire. Comptez 15 à 30 minutes pour la première construction.
 
 Vérification :
 
@@ -38,6 +42,8 @@ curl http://localhost:8080/info                         # même service via la r
 ```
 
 ## 3. Architecture
+
+![Architecture de RÉSULTATS-BF](docs/architecture.png)
 
 | Machine | Adresse | RAM | Rôle |
 |---|---|---|---|
@@ -116,7 +122,32 @@ resultats/               sorties brutes des scénarios
 - **Après une bascule** : ne pas redémarrer `bdd1` tel quel (il repartirait en
   primaire). Voir la procédure de remise en service dans le dossier.
 
-## 8. Équipe
+## 8. Contribuer
+
+1. Prendre un ticket dans l'onglet **Issues** et s'y assigner.
+2. Créer une branche depuis `main` à jour :
+   ```bash
+   git switch main && git pull
+   git switch -c 12-courte-description
+   ```
+3. Commiter en citant le ticket : `git commit -m "Sonde /sante dans HAProxy (#12)"`.
+4. Pousser (`git push -u origin 12-courte-description`) et ouvrir une **pull request**
+   vers `main` avec `Closes #12` dans la description.
+5. Un membre d'un **autre rôle** relit, lance `vagrant up`, puis approuve.
+6. Fusion par « Create a merge commit ».
+
+Règles : jamais de `.env` dans un commit, jamais d'adresse de serveur applicatif en dur,
+jamais de données PostgreSQL dans `/vagrant`.
+
+## 9. Documentation
+
+| Document | Contenu |
+|---|---|
+| [docs/dossier_architecture.md](docs/dossier_architecture.md) | Dossier d'architecture (livrable L2) |
+| [docs/journal_de_bord.md](docs/journal_de_bord.md) | Journal de bord (livrable L3) |
+| [docs/tickets.md](docs/tickets.md) | Liste des tickets par jalon |
+
+## 10. Équipe
 
 | Rôle | Membre |
 |---|---|
