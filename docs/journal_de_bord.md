@@ -33,8 +33,10 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 03/10 | Suivi par tickets GitHub, une branche par ticket, pull request relue par un autre rôle | Historique lisible, contribution de chacun visible, relecture croisée |
 | 03/10 | Fusion en « merge commit » uniquement (squash et rebase désactivés) | Conserver dans l'historique les commits de chaque membre (preuve de la rotation) |
 | 03/10 | Pas de partage du fichier de la boîte par clé USB : chacun la télécharge via `vagrant up` | Une boîte ajoutée depuis un fichier perd son numéro de version épinglée ; et chaque poste teste ainsi R1 en conditions réelles |
-| ../10 | Boîte `bento/ubuntu-24.04` épinglée à la version `202510.26.0` | La version de l'annexe (`202404.23.0`) n'était pas garantie au catalogue ; `202510.26.0` est disponible et le socle a été construit avec |
+| 02/10 | Boîte `bento/ubuntu-24.04` épinglée à la version `202510.26.0` | La version de l'annexe (`202404.23.0`) n'était pas garantie au catalogue ; `202510.26.0` est disponible et le socle a été construit avec |
 | 20/10 | Provisionneurs `commun`, `keepalived` et `obs` rejoués à chaque `vagrant up` ; `NB_APP` fixé dans `.env` | Activer E1 après coup laissait lb1 sans keepalived ; `/etc/hosts` et Prometheus doivent suivre `NB_APP` (R3) |
+| 21/10 | Pannes simulées par `vagrant halt -f` dans V2, V4 et V6, relance automatique en fin de V2 et V6 | Panne brutale plus réaliste ; `vagrant halt` passe par SSH et avait échoué sur app1 |
+| 21/10 | Contrôle keepalived par `systemctl is-active --quiet haproxy` au lieu de `pidof haproxy` | Le contrôle `pidof` échouait sous keepalived (voir difficultés) |
 | | `[À COMPLÉTER au fil du projet]` | |
 
 ## 3. Difficultés rencontrées et comment elles ont été levées
@@ -42,6 +44,9 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | Date | Difficulté | Solution | Qui |
 |---|---|---|---|
 | 03/10 | Section « Pull Requests » introuvable dans les réglages GitHub | Elle se trouve dans les réglages du **dépôt** (onglet Settings du dépôt), pas dans ceux du compte ; réglage aussi possible par `gh api` | B |
+| 21/10 | V2 : script terminé sans rapport ; app1 restée « running » mais injoignable, SSH en échec (« timeout during server version negotiating ») | Panne simulée par `vagrant halt -f` (sans SSH) ; échec de l'arrêt journalisé au lieu d'interrompre le script ; relance automatique de la VM en fin de scénario | A |
+| 21/10 | `vagrant up` en échec sur lb1 (installation de keepalived) : « Temporary failure resolving », DNS de la VM périmé après un changement de réseau du PC | `vagrant reload lb1` pour repartir ; correction durable : `--natdnshostresolver1 on` dans le Vagrantfile et nouvel essai automatique d'apt après un `apt-get update` forcé | A |
+| 21/10 | E1 : l'IP virtuelle n'était portée par aucun répartiteur ; le contrôle `pidof haproxy` de keepalived échouait chaque seconde (`pidof` est un lien vers `killall5`, que keepalived exécute sous son vrai nom avec `enable_script_security`) | Contrôle remplacé par `systemctl is-active --quiet haproxy` ; lb1 repasse MASTER, V6 conforme | A |
 | | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan

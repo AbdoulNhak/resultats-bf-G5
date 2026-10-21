@@ -153,6 +153,7 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 | **Provisionneurs `commun`, `keepalived` et `obs` rejoués à chaque `vagrant up`** (`run: "always"`) | Exécution au premier démarrage seulement | Sans cela, activer E1 sur une plateforme existante n'installait keepalived que sur lb2, et `/etc/hosts` ou les cibles Prometheus ne suivaient pas `NB_APP`. Les scripts sont idempotents (R2), donc les rejouer ne change rien quand la topologie est stable. |
 | **`NB_APP` fixé dans `.env`** plutôt que sur la ligne de commande | `NB_APP=4 vagrant up` seul | Chaque commande Vagrant réécrit `config/noeuds.yml` : une valeur donnée une seule fois en ligne de commande serait perdue au `vagrant up lb1` suivant. Le Vagrantfile affiche un avertissement si des VM `appN` existent au-delà de `NB_APP`. |
 | **Paramètre `PAREFEU` lu comme les autres** (ligne de commande ou `.env`) | Lecture dans `.env` seulement | Cohérence avec `NB_APP`, `AVEC_LB2` et `AVEC_OBS`. |
+| **Résolution DNS par l'hôte** (`--natdnshostresolver1 on`) et nouvel essai d'apt | DNS NAT par défaut de VirtualBox | Un changement de réseau du poste rendait le DNS des VM invalide et faisait échouer `vagrant up` (R1). |
 
 ---
 
@@ -304,26 +305,27 @@ Durée mesurée : `[MESURE - scénario V4]`.
 Aucune action : keepalived déplace l'IP virtuelle `192.168.60.10` de lb1 vers
 lb2 dès que lb1 ne répond plus (annonces VRRP toutes les secondes). Au retour
 de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
+keepalived vérifie chaque seconde que HAProxy tourne avec
+`systemctl is-active --quiet haproxy` ; deux échecs consécutifs suffisent à lui
+faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
+4,5 s).
 
 ---
 
 ## 9. Résultats des scénarios V1 à V6
 
-> Conditions de mesure `[À COMPLÉTER - rôle D]` : poste (processeur, RAM,
-> système), versions de VirtualBox et Vagrant, emplacement du client de charge
-> (hôte ou VM). Les VM partagent le processeur d'une seule machine : les débits
-> ne sont pas ceux d'un vrai déploiement.
+> Client de mesure : poste hôte (Lenovo ThinkPad P1 Gen 7, Windows), scripts de tests/ lancés depuis Git Bash. Les pannes sont simulées par `vagrant halt -f` (extinction forcée : panne brutale, indépendante de SSH). Chaque requête du client expire au bout de 2 s (`curl -m 2`, tests/config.sh) : les durées mesurées sont donc précises à 2 s près. Sous Git Bash, un tour de boucle de mesure prend environ 0,5 s (lancement des processus sous Windows) au lieu des 0,1 s (V2) et 0,2 s (V6) prévus. Les VM partagent le processeur d'une seule machine : les débits ne sont pas ceux d'un vrai déploiement. `[À COMPLÉTER - rôle D : processeur, RAM, versions de VirtualBox et Vagrant]`
 
 ### 9.1 Synthèse
 
 | Scénario | Mesure relevée | Attendu | Obtenu | Verdict |
 |---|---|---|---|---|
 | V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | `[MESURE]` | |
-| V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | `[MESURE]` | |
+| V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 ; période dégradée 2,4 s (au plus 4,4 s) | Conforme |
 | V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | `[MESURE]` | |
 | V4 Panne de la base primaire | 503 propre ; durée de la bascule | 503 JSON, jamais de page blanche | `[MESURE]` | |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
-| V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | `[MESURE]` | |
+| V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
 
 ### 9.2 V1 - Répartition
 
@@ -339,13 +341,15 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 ### 9.3 V2 - Panne d'un serveur applicatif
 
-- **Commande** : `bash tests/v2_panne_app.sh` (requêtes toutes les 0,1 s pendant 40 s ; `vagrant halt app1` à t = 5 s)
+- **Commande** : `bash tests/v2_panne_app.sh` (requêtes toutes les 0,1 s pendant 40 s ; `vagrant halt -f app1` à t = 5 s ; relance automatique d'app1 en fin de scénario)
+- Extinction forcée : simule une panne brutale et ne dépend pas de SSH.
+- **Sortie brute** : `resultats/v2_20261021_011336.txt`
 
 | Requêtes envoyées | En erreur | Taux d'erreur | Période dégradée |
 |---|---|---|---|
-| `[MESURE]` | `[MESURE]` | `[MESURE]` | `[MESURE]` |
+| 76 | 2 | 2,63 % | 2,4 s (de 8,6 s à 11,0 s après le déclenchement) |
 
-**Commentaire** : `[À RÉDIGER]`
+**Commentaire** : HAProxy a écarté app1 sans intervention : seules 2 requêtes sur 76 ont échoué, toutes dans une fenêtre de 2,4 s. Chaque requête du client expirant au bout de 2 s, la période dégradée réelle est comprise entre 2,4 s et 4,4 s, donc sous les 5 s exigées. Cet ordre de grandeur correspond au réglage de la sonde : serveur écarté après 2 échecs consécutifs à 1 s d'intervalle (`inter 1s fall 2`), plus le délai de détection d'une machine éteinte, qui ne renvoie aucun refus de connexion. Les 2 erreurs sont vraisemblablement des expirations côté client (2 s) pendant que HAProxy rejouait la requête sur app2 (`retries 2`, `option redispatch`) : un client plus patient aurait obtenu une réponse plus lente plutôt qu'une erreur. Les erreurs n'apparaissent que 8,6 s après le déclenchement : ce délai inclut le démarrage de la commande `vagrant halt -f` sous Windows ; l'instant exact de la coupure n'est donc pas connu et seule la durée de la période dégradée est significative. Relancé automatiquement, app1 est revenu dans la répartition 57,3 s après le lancement de `vagrant up app1`, démarrage de la VM compris.
 
 ### 9.4 V3 - Montée en charge
 
@@ -378,13 +382,15 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 ### 9.7 V6 - Panne du répartiteur (E1)
 
-- **Commande** : `bash tests/v6_panne_lb.sh` (appels à l'IP virtuelle toutes les 0,2 s ; `vagrant halt lb1` à t = 3 s)
+- **Commande** : `bash tests/v6_panne_lb.sh` (appels à l'IP virtuelle toutes les 0,2 s pendant 40 s ; `vagrant halt -f lb1` à t = 3 s ; relance automatique de lb1 et contrôle qu'il reprend l'IP virtuelle)
+- Extinction forcée : simule une panne brutale et ne dépend pas de SSH.
+- **Sortie brute** : `resultats/v6_20261021_132655.txt`
 
 | Requêtes envoyées | En erreur | Durée d'interruption |
 |---|---|---|
-| `[MESURE]` | `[MESURE]` | `[MESURE]` |
+| 69 | 2 | 2,5 s (de 6,1 s à 8,6 s après le déclenchement ; au plus 4,5 s) |
 
-**Commentaire** : `[À RÉDIGER]`
+**Commentaire** : lb2 a pris l'IP virtuelle 192.168.60.10 sans aucune intervention ; seules 2 requêtes sur 69 ont échoué. L'interruption mesurée (2,5 s, au plus 4,5 s en comptant l'expiration de 2 s de chaque requête) est cohérente avec la théorie VRRP : lb2 déclare le maître absent après 3 annonces manquées plus un délai lié à sa priorité, soit 3 × 1 s + (256 − 100)/256 s ≈ 3,6 s. Les erreurs n'apparaissent que 6,1 s après le déclenchement : ce délai correspond au démarrage de `vagrant halt -f` sous Windows, pas à la bascule. Relancé, lb1 a repris l'IP virtuelle grâce à sa priorité plus haute (150 contre 100), 64,5 s après le lancement de `vagrant up lb1`, démarrage de la VM compris.
 
 ### 9.8 Idempotence (R2)
 
@@ -405,7 +411,8 @@ bascule même si la VM reste allumée.
 
 Activation : `AVEC_LB2=1 vagrant up`. Démonstration : scénario V6.
 
-`[À COMPLÉTER - rôles A et D : captures, difficultés]`
+**Difficulté rencontrée** : au premier essai, l'IP virtuelle n'était portée par aucun répartiteur. Le contrôle de HAProxy (`pidof haproxy`) échouait chaque seconde : sur Ubuntu, `pidof` est un lien vers `killall5`, que keepalived exécute sous son vrai nom lorsque `enable_script_security` est activé. Les deux répartiteurs passaient en état FAULT. Le contrôle a été remplacé par `systemctl is-active --quiet haproxy` ; lb1 est alors passé MASTER. Le scénario V6 a ensuite été conforme (voir 9.7).
+`[À COMPLÉTER - rôle A : capture de « ip -o -4 addr show » sur lb2 pendant la panne de lb1]`
 
 ### E2 - Observabilité
 
@@ -434,6 +441,9 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | **Port 8080 seulement sur lb1** | Avec E1, si lb1 tombe, il faut passer par l'IP virtuelle `.10` et non plus par `localhost:8080` | Accès client uniquement par l'IP virtuelle |
 | **Pas de chiffrement interne** | Trafic HTTP et PostgreSQL en clair sur le réseau privé | TLS sur HAProxy et PostgreSQL |
 | **Supervision sans alertes** | Une panne se voit sur le tableau de bord, mais personne n'est prévenu | Alertmanager avec règles sur la disponibilité |
+| Mesures lancées depuis Git Bash sous Windows | Une mesure environ toutes les 0,5 s ; durées précises à 2 s près (expiration du client) | Client de mesure Linux dédié avec horodatage fin (`wrk`, `hey`) |
+| Instant de la panne connu à quelques secondes près | `vagrant halt -f` met plusieurs secondes à démarrer sous Windows | Coupure horodatée au plus près (`VBoxManage controlvm <vm> poweroff`, ou `poweroff -f` dans la VM) |
+| Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
 
 `[À COMPLÉTER - tous : limites découvertes pendant les tests]`
 
