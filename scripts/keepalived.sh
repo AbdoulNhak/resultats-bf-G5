@@ -23,7 +23,8 @@ global_defs {
 }
 
 vrrp_script verifier_haproxy {
-    script "/usr/bin/pidof haproxy"
+    # script "/usr/bin/pidof haproxy"
+    script "/usr/bin/systemctl is-active --quiet haproxy"
     interval 1
     fall 2
     rise 2
