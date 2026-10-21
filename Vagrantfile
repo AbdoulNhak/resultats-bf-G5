@@ -58,11 +58,27 @@ GROUPE   = parametre("GROUPE", "5").to_i          # groupe 5 -> 192.168.60.0/24
 NB_APP   = parametre("NB_APP", "2").to_i          # R3 : une seule valeur à changer
 AVEC_LB2 = parametre("AVEC_LB2", "0") == "1"      # extension E1
 AVEC_OBS = parametre("AVEC_OBS", "0") == "1"      # extension E2
+PAREFEU  = parametre("PAREFEU", "0") == "1"       # R8 : pare-feu ufw (rôle B)
 RESEAU   = "192.168.#{55 + GROUPE}"
 BOITE    = "bento/ubuntu-24.04"
-VERSION  = "202510.26.0"   # version épingler pour tous
+VERSION  = "202510.26.0"   # version épinglée pour tous (vérifiée : vagrant box add réussi)
 
 abort "NB_APP doit être compris entre 2 et 9 (reçu : #{NB_APP})" unless (2..9).cover?(NB_APP)
+
+# Garde-fou R3 : chaque commande Vagrant réécrit config/noeuds.yml. Si NB_APP=4
+# n'a été donné que sur la ligne de commande, un simple `vagrant up lb1` ou
+# `vagrant provision` ultérieur réengendrerait HAProxy avec 2 serveurs et
+# app3/app4 deviendraient invisibles pour Vagrant. On prévient.
+orphelins = Dir.glob(File.join(RACINE, ".vagrant", "machines", "app*", "*", "id"))
+               .map { |f| File.basename(File.dirname(File.dirname(f))) }
+               .select { |nom| nom.delete("app").to_i > NB_APP }
+               .uniq.sort
+if !orphelins.empty? && !$avertissement_affiche
+  $avertissement_affiche = true
+  warn "ATTENTION : #{orphelins.join(', ')} existe(nt) mais NB_APP=#{NB_APP}. " \
+       "Fixez NB_APP dans .env (ex. NB_APP=#{orphelins.last.delete('app')}) " \
+       "ou détruisez ces VM avant de réduire NB_APP."
+end
 
 # ---------------------------------------------------------------------------
 # 3. Source unique de vérité
@@ -76,7 +92,8 @@ NOEUDS << { "nom" => "bdd2", "ip" => "#{RESEAU}.32", "mem" => 768, "role" => "re
   NOEUDS << { "nom" => "app#{i}", "ip" => "#{RESEAU}.#{20 + i}", "mem" => 512, "role" => "app" }
 end
 NOEUDS << { "nom" => "lb1", "ip" => "#{RESEAU}.11", "mem" => 512, "role" => "lb", "priorite" => 150 }
-NOEUDS << { "nom" => "lb2", "ip" => "#{RESEAU}.12", "mem" => 512, "role" => "lb", "priorite" => 100 } if AVEC_LB2
+LB2_IP = "#{RESEAU}.12"   # défini une seule fois : sert à lb2 et au pair VRRP de lb1
+NOEUDS << { "nom" => "lb2", "ip" => LB2_IP, "mem" => 512, "role" => "lb", "priorite" => 100 } if AVEC_LB2
 NOEUDS << { "nom" => "obs", "ip" => "#{RESEAU}.41", "mem" => 768, "role" => "obs" } if AVEC_OBS
 
 TOPOLOGIE = {
@@ -104,9 +121,10 @@ ENV_COMMUN = SECRETS.merge(
   "BDD1_IP"  => ip_de("bdd1"),
   "BDD2_IP"  => ip_de("bdd2"),
   "LB1_IP"   => ip_de("lb1"),
-  "LB2_IP"   => "#{RESEAU}.12",
+  "LB2_IP"   => LB2_IP,
   "AVEC_LB2" => AVEC_LB2 ? "1" : "0",
   "AVEC_OBS" => AVEC_OBS ? "1" : "0",
+  "PAREFEU"  => PAREFEU ? "1" : "0",
 )
 
 # ---------------------------------------------------------------------------
@@ -137,15 +155,22 @@ Vagrant.configure("2") do |config|
       env = ENV_COMMUN.merge("MON_NOM" => n["nom"], "MON_IP" => n["ip"], "ROLE" => n["role"])
       env["PRIORITE"] = n["priorite"].to_s if n["priorite"]
 
-      # Socle commun : paquets, /etc/hosts, fuseau horaire, node_exporter (E2)
-      m.vm.provision "commun", type: "shell", path: "scripts/commun.sh", env: env
+      # Socle commun : paquets, /etc/hosts, fuseau horaire, node_exporter (E2).
+      # run: "always" : /etc/hosts suit NB_APP et node_exporter est installé
+      # même si E2 est activée après coup. Le script est idempotent (R2).
+      m.vm.provision "commun", type: "shell", path: "scripts/commun.sh", env: env, run: "always"
 
       case n["role"]
       when "lb"
         # run: "always" : la configuration HAProxy est réengendrée à chaque
         # `vagrant up`, pour suivre automatiquement NB_APP (R3).
         m.vm.provision "lb", type: "shell", path: "scripts/lb.sh", env: env, run: "always"
-        m.vm.provision "keepalived", type: "shell", path: "scripts/keepalived.sh", env: env if AVEC_LB2
+        # run: "always" : si E1 est activée sur une plateforme déjà construite,
+        # lb1 (déjà provisionné) reçoit quand même keepalived.
+        m.vm.provision "keepalived", type: "shell", path: "scripts/keepalived.sh", env: env, run: "always" if AVEC_LB2
+      when "obs"
+        # run: "always" : les cibles Prometheus suivent NB_APP (R3).
+        m.vm.provision "obs", type: "shell", path: "scripts/obs.sh", env: env, run: "always"
       else
         m.vm.provision n["role"], type: "shell", path: "scripts/#{n['role']}.sh", env: env
       end
