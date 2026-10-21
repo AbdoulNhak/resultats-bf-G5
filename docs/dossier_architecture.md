@@ -55,7 +55,7 @@ poste avec `vagrant destroy -f` puis `vagrant up`, sans aucun geste manuel.
 | Contrainte | Valeur retenue |
 |---|---|
 | Outils | Vagrant 2.4 + VirtualBox 7, sur poste personnel |
-| Boîte | `bento/ubuntu-24.04`, version épinglée `[À COMPLÉTER - rôle A : version retenue]` |
+| Boîte | `bento/ubuntu-24.04`, version épinglée `202510.26.0` (fournisseur virtualbox, amd64) |
 | Réseau | Sous-réseau du groupe 5 : `192.168.60.0/24` (plage hôte-seul autorisée par défaut par VirtualBox) |
 | Mémoire | Socle obligatoire ≤ 3 Go (5 VM : 2 × 768 Mo + 3 × 512 Mo = 3 072 Mo) |
 | Coût | Aucun : ni compte cloud, ni image construite à la main |
@@ -145,7 +145,14 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 | **`.env` engendré automatiquement** s'il manque | Demander de copier `.env.exemple` | R1 interdit tout geste manuel ; R7 interdit les secrets dans le dépôt. Les mots de passe sont tirés au hasard au premier `vagrant up`. |
 | **Données PostgreSQL hors de `/vagrant`** | Dossier synchronisé | Les verrous et la durabilité de PostgreSQL ne fonctionnent pas dans un dossier partagé VirtualBox (piège n°3 du sujet). |
 
-`[À COMPLÉTER - rôle A : ajouter tout choix modifié pendant la mise au point]`
+**Choix ajoutés pendant la mise au point (rôle A)**
+
+| Choix | Alternative | Pourquoi |
+|---|---|---|
+| **Version de boîte `202510.26.0`** | Version `202404.23.0` de l'annexe | Version disponible au catalogue et avec laquelle le socle a été construit ; épinglée pour que tous les postes utilisent la même image (R1). |
+| **Provisionneurs `commun`, `keepalived` et `obs` rejoués à chaque `vagrant up`** (`run: "always"`) | Exécution au premier démarrage seulement | Sans cela, activer E1 sur une plateforme existante n'installait keepalived que sur lb2, et `/etc/hosts` ou les cibles Prometheus ne suivaient pas `NB_APP`. Les scripts sont idempotents (R2), donc les rejouer ne change rien quand la topologie est stable. |
+| **`NB_APP` fixé dans `.env`** plutôt que sur la ligne de commande | `NB_APP=4 vagrant up` seul | Chaque commande Vagrant réécrit `config/noeuds.yml` : une valeur donnée une seule fois en ligne de commande serait perdue au `vagrant up lb1` suivant. Le Vagrantfile affiche un avertissement si des VM `appN` existent au-delà de `NB_APP`. |
+| **Paramètre `PAREFEU` lu comme les autres** (ligne de commande ou `.env`) | Lecture dans `.env` seulement | Cohérence avec `NB_APP`, `AVEC_LB2` et `AVEC_OBS`. |
 
 ---
 

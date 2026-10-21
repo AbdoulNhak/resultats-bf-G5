@@ -33,6 +33,8 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 03/10 | Suivi par tickets GitHub, une branche par ticket, pull request relue par un autre rôle | Historique lisible, contribution de chacun visible, relecture croisée |
 | 03/10 | Fusion en « merge commit » uniquement (squash et rebase désactivés) | Conserver dans l'historique les commits de chaque membre (preuve de la rotation) |
 | 03/10 | Pas de partage du fichier de la boîte par clé USB : chacun la télécharge via `vagrant up` | Une boîte ajoutée depuis un fichier perd son numéro de version épinglée ; et chaque poste teste ainsi R1 en conditions réelles |
+| ../10 | Boîte `bento/ubuntu-24.04` épinglée à la version `202510.26.0` | La version de l'annexe (`202404.23.0`) n'était pas garantie au catalogue ; `202510.26.0` est disponible et le socle a été construit avec |
+| 20/10 | Provisionneurs `commun`, `keepalived` et `obs` rejoués à chaque `vagrant up` ; `NB_APP` fixé dans `.env` | Activer E1 après coup laissait lb1 sans keepalived ; `/etc/hosts` et Prometheus doivent suivre `NB_APP` (R3) |
 | | `[À COMPLÉTER au fil du projet]` | |
 
 ## 3. Difficultés rencontrées et comment elles ont été levées
