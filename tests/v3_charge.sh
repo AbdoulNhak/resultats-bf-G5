@@ -57,8 +57,11 @@ brut=$(mktemp)
   # Synthèse calculée à partir des sorties brutes ci-dessus (rien n'est saisi à la main)
   awk -v n="$nb" '
     /Requests per second/ { essais = essais sep $7; sep = ";"; somme += $7; k++ }
-    /Failed requests/     { echecs += $6 }
-    /Non-2xx/             { echecs += $6 }
-    END { printf "SYNTHESE n=%s essais=%s moyenne=%.1f echecs=%d\n", n, essais, (k ? somme / k : 0), echecs }' "$brut"
+    /Failed requests/     { f[$2] = $6 }
+    /Non-2xx/             { x[$2] = $6 }
+    # Une réponse 503 est comptée par ab dans « Failed » ET dans « Non-2xx » :
+    # on retient, pour chaque essai, le plus grand des deux (pas leur somme).
+    END { for (e in f) echecs += (x[e] > f[e] ? x[e] : f[e])
+          printf "SYNTHESE n=%s essais=%s moyenne=%.1f echecs=%d\n", n, essais, (k ? somme / k : 0), echecs }' "$brut"
 } | journaliser "v3_n${nb}"
 rm -f "$brut"
