@@ -1,0 +1,6 @@
+V1 - Répartition - 2026-10-21 19:48:43 - cible http://192.168.60.10
+      5 app1
+      5 app2
+      5 app3
+      5 app4
+Total : 20 appels sur 4 serveurs ; plus sollicité 5, moins sollicité 5 ; écart = 0 % de la moyenne

@@ -270,8 +270,13 @@ Ce qui se passe :
 Contrôle : `bash tests/v1_repartition.sh` doit montrer les 4 serveurs. En cas
 de doute : `vagrant provision lb1`.
 
-**Retirer des serveurs** : `vagrant destroy -f app3 app4`, puis
-`NB_APP=2 vagrant provision lb1`.
+**Retirer des serveurs** : détruire les VM en trop AVANT de baisser `NB_APP` :
+`NB_APP=4 vagrant destroy -f app3 app4` (la valeur passée sur la ligne de
+commande est prioritaire sur `.env`), puis mettre `NB_APP=2` dans `.env` et
+lancer `vagrant provision lb1` (contrôle : « HAProxy prêt : 2 serveurs
+applicatifs »). Si `NB_APP` est baissé d'abord, Vagrant ne voit plus app3 et
+app4 (« machine not found ») alors qu'elles tournent encore dans VirtualBox ; le
+Vagrantfile affiche alors un avertissement.
 
 ### 8.3 Bascule de la base sur bdd2 (R6)
 
@@ -320,24 +325,26 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 | Scénario | Mesure relevée | Attendu | Obtenu | Verdict |
 |---|---|---|---|---|
-| V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | `[MESURE]` | |
+| V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | 5 / 5 / 5 / 5 sur 4 serveurs ; écart 0 % | Conforme |
 | V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 ; période dégradée 2,4 s (au plus 4,4 s) | Conforme |
-| V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | `[MESURE]` | |
+| V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | N=4 : 13,2 req/s (41 % d'erreurs 503) puis 45,7 req/s (0 erreur) ; N=2 : `[MESURE]` | |
 | V4 Panne de la base primaire | 503 propre ; durée de la bascule | 503 JSON, jamais de page blanche | `[MESURE]` | |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
 
 ### 9.2 V1 - Répartition
 
-- **Commande** : `bash tests/v1_repartition.sh` (20 appels à `/info`)
-- **Sortie brute** : `resultats/v1_<date>.txt`
+- **Commande** : `bash tests/v1_repartition.sh` (20 appels à `/info`, avec `NB_APP=4`, cible l'IP virtuelle `192.168.60.10`)
+- **Sortie brute** : `resultats/v1_20261021_194843.txt`
 
 | Serveur | Nombre de réponses |
 |---|---|
-| app1 | `[MESURE]` |
-| app2 | `[MESURE]` |
+| app1 | 5 |
+| app2 | 5 |
+| app3 | 5 |
+| app4 | 5 |
 
-**Commentaire** : `[À RÉDIGER]`
+**Commentaire** : avec quatre serveurs applicatifs, les 20 appels se répartissent exactement à parts égales (5 chacun, écart de 0 % pour 20 % tolérés) : c'est le comportement attendu du tour de rôle (`balance roundrobin`). Ce résultat confirme aussi R3 : app3 et app4 ont été ajoutés en changeant une seule valeur (`NB_APP=4` dans `.env`), et HAProxy les a pris en compte sans modification manuelle, sa configuration étant réengendrée depuis `config/noeuds.yml` à chaque `vagrant up`.
 
 ### 9.3 V2 - Panne d'un serveur applicatif
 
@@ -353,14 +360,18 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 ### 9.4 V3 - Montée en charge
 
-- **Commande** : `bash tests/v3_charge.sh` (`ab -n 2000 -c 50`, 3 essais), avec N=2 puis N=4
+- **Commande** : `bash tests/v3_charge.sh` (`ab -n 2000 -c 50`, 3 essais précédés d'un échauffement), cible l'IP virtuelle ; `ab` exécuté depuis la VM bdd2 (`ab` absent de Git Bash)
+- **Sorties brutes** : `resultats/v3_n4_20261021_200906.txt` (1re série N=4), `resultats/v3_n4_20261021_202924.txt` (2e série N=4)
 
 | Configuration | Essai 1 (req/s) | Essai 2 (req/s) | Essai 3 (req/s) | Moyenne | Requêtes en échec |
 |---|---|---|---|---|---|
 | N = 2 | `[MESURE]` | `[MESURE]` | `[MESURE]` | | |
-| N = 4 | `[MESURE]` | `[MESURE]` | `[MESURE]` | | |
+| N = 4 (1re série, 20 h 09) | 14,56 | 12,00 | 13,12 | 13,2 | 2 475 sur 6 000 (41 %) |
+| N = 4 (2e série, 20 h 29) | 47,02 | 44,30 | 45,86 | 45,7 | 0 |
 
-**Commentaire** : `[À RÉDIGER - expliquer honnêtement le résultat, même si le débit n'augmente pas : processeur partagé, coût de la connexion par requête, base unique…]`
+Note : la ligne SYNTHESE de `v3_n4_20261021_200906.txt` indique 4 950 échecs : une réponse 503 y était comptée deux fois (« Failed requests » et « Non-2xx responses » d'ab). Le calcul a été corrigé dans `tests/v3_charge.sh` ; le nombre réel d'échecs est 984 + 731 + 760 = 2 475. Le fichier brut n'a pas été modifié.
+
+**Commentaire (provisoire, en attente de la mesure N=2)** : les deux séries à N=4, lancées à 20 minutes d'intervalle avec la même configuration, donnent des résultats très différents. La première (13,2 req/s en moyenne, temps moyen par requête de 3,4 à 4,2 s) renvoie 41 % de réponses 503, entre 37 % et 49 % selon l'essai ; la seconde (45,7 req/s, environ 1,1 s par requête) n'a aucune erreur. La cause des 503 de la première série n'est pas établie : elle a été lancée peu après la création d'app3 et d'app4, alors que la plateforme était peut-être encore occupée. Les deux séries sont conservées. Dans tous les cas, le débit reste modeste : les VM ont 1 processeur chacune et partagent celui du poste, chaque requête ouvre une nouvelle connexion PostgreSQL vers l'unique base bdd1, et le client de charge tourne sur la VM bdd2 (`ab` absent de Git Bash). `[À COMPLÉTER : comparaison avec N=2 et nouvelle série N=4 de contrôle]`
 
 ### 9.5 V4 - Panne de la base primaire
 
@@ -444,6 +455,7 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | Mesures lancées depuis Git Bash sous Windows | Une mesure environ toutes les 0,5 s ; durées précises à 2 s près (expiration du client) | Client de mesure Linux dédié avec horodatage fin (`wrk`, `hey`) |
 | Instant de la panne connu à quelques secondes près | `vagrant halt -f` met plusieurs secondes à démarrer sous Windows | Coupure horodatée au plus près (`VBoxManage controlvm <vm> poweroff`, ou `poweroff -f` dans la VM) |
 | Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
+| Débit très variable d'une série à l'autre | Avec N=4, 13,2 req/s puis 45,7 req/s à 20 minutes d'intervalle : les mesures dépendent de l'activité du poste et des VM | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
 
 `[À COMPLÉTER - tous : limites découvertes pendant les tests]`
 
