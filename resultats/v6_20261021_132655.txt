@@ -1,0 +1,4 @@
+V6 - Panne de lb1 - 2026-10-21 13:26:55 - cible http://192.168.60.10
+Requêtes : 69 ; en erreur : 2
+Interruption : 2.5 s (de 6.1 s à 8.6 s après la panne)
+lb1 de retour et maître de l'IP virtuelle 64.5 s après le lancement de vagrant up
