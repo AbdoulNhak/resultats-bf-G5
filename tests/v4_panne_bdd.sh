@@ -10,7 +10,7 @@ source tests/config.sh
 {
   echo "V4 - Panne de bdd1 - $(date '+%F %T') - cible $URL"
   t0=$(horodatage)
-  vagrant halt bdd1 >/dev/null 2>&1
+  vagrant halt -f bdd1 >/dev/null 2>&1 || echo "ATTENTION : arrêt de bdd1 en échec"
   echo "[$(date +%T)] bdd1 arrêtée"
 
   echo "Réponse de /sante pendant la panne :"
