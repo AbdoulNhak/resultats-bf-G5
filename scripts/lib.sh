@@ -29,9 +29,19 @@ installer_paquets() {
     dpkg -s "$p" >/dev/null 2>&1 || manquants+=("$p")
   done
   if [ ${#manquants[@]} -gt 0 ]; then
-    apt_maj
     journal "installation : ${manquants[*]}"
-    apt-get install -y -qq --no-install-recommends "${manquants[@]}"
+    apt_maj || true
+    if apt-get install -y -qq --no-install-recommends "${manquants[@]}"; then
+      return 0
+    fi
+
+    rm -f /var/cache/resultats-bf-apt-update
+    apt_maj || true
+    sleep 5
+    if ! apt-get install -y -qq --no-install-recommends "${manquants[@]}"; then
+      journal "ERREUR : installation impossible de ${manquants[*]} (réseau ou dépôt Ubuntu injoignable)"
+      return 1
+    fi
   fi
 }
 

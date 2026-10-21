@@ -150,6 +150,8 @@ Vagrant.configure("2") do |config|
         vb.memory = n["mem"]
         vb.cpus   = 1
         vb.linked_clone = true
+        # La VM résout les noms par le résolveur de l'hôte : le DNS reste valide si le PC change de réseau (Wi-Fi, veille, VPN).
+        vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
       end
 
       env = ENV_COMMUN.merge("MON_NOM" => n["nom"], "MON_IP" => n["ip"], "ROLE" => n["role"])
