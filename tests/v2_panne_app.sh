@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# V2 — Panne d'un serveur applicatif pendant une charge.
+# V2 - Panne d'un serveur applicatif pendant une charge.
 # Attendu : service disponible ; plus aucune erreur au-delà de 5 secondes.
 # Mesures : requêtes perdues, durée de la période dégradée.
 set -euo pipefail
@@ -21,7 +21,7 @@ done
 wait
 
 {
-  echo "V2 — Panne de $CIBLE — $(date '+%F %T') — cible $URL"
+  echo "V2 - Panne de $CIBLE - $(date '+%F %T') - cible $URL"
   awk -v t0="$t0" '
     /PANNE/ { tp = $1; next }
     { total++; if ($2 != "200") { ko++; if (!premier) premier = $1; dernier = $1 } }

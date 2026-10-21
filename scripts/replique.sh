@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bdd2 — réplique en flux de bdd1, promouvable (R5).
+# bdd2 - réplique en flux de bdd1, promouvable (R5).
 # Responsable : rôle C (ingénieur données)
 source /vagrant/scripts/lib.sh
 source /vagrant/scripts/pg_commun.sh

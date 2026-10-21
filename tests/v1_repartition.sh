@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# V1 — Répartition : 20 appels successifs à /info.
+# V1 - Répartition : 20 appels successifs à /info.
 # Attendu : les N serveurs apparaissent tour à tour ; écart max-min < 20 %.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 source tests/config.sh
 
 {
-  echo "V1 — Répartition — $(date '+%F %T') — cible $URL"
+  echo "V1 - Répartition - $(date '+%F %T') - cible $URL"
   for i in $(seq 1 20); do
     curl -s -m 2 "$URL/info" | sed -E 's/.*"serveur": ?"([^"]+)".*/\1/'
     echo

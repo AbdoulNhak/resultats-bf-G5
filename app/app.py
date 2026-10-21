@@ -1,4 +1,4 @@
-"""RÉSULTATS-BF — service applicatif sans état.
+"""RÉSULTATS-BF - service applicatif sans état.
 
 Responsable : rôle B (ingénieur applicatif et sécurité)
 

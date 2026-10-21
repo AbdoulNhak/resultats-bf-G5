@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 #
-# RÉSULTATS-BF — Groupe 5 — Infrastructure résiliente et scalable avec Vagrant
+# RÉSULTATS-BF - Groupe 5 - Infrastructure résiliente et scalable avec Vagrant
 # Responsable : rôle A (architecte réseau et répartition)
 #
 # SOURCE UNIQUE DE VÉRITÉ : la table NOEUDS ci-dessous décrit les machines
@@ -31,7 +31,7 @@ RACINE = File.dirname(__FILE__)
 FICHIER_ENV = File.join(RACINE, ".env")
 unless File.exist?(FICHIER_ENV)
   File.write(FICHIER_ENV, <<~ENV, encoding: "UTF-8")
-    # Fichier engendré automatiquement par le Vagrantfile — NE PAS VERSIONNER.
+    # Fichier engendré automatiquement par le Vagrantfile - NE PAS VERSIONNER.
     # Modèle documenté : .env.exemple
     PG_APP_PASSWORD=#{SecureRandom.hex(16)}
     PG_REPL_PASSWORD=#{SecureRandom.hex(16)}
@@ -60,7 +60,7 @@ AVEC_LB2 = parametre("AVEC_LB2", "0") == "1"      # extension E1
 AVEC_OBS = parametre("AVEC_OBS", "0") == "1"      # extension E2
 RESEAU   = "192.168.#{55 + GROUPE}"
 BOITE    = "bento/ubuntu-24.04"
-VERSION  = "202510.26.0"   # TODO rôle A : vérifier que cette version existe et l'épingler pour tous
+VERSION  = "202510.26.0"   # version épingler pour tous
 
 abort "NB_APP doit être compris entre 2 et 9 (reçu : #{NB_APP})" unless (2..9).cover?(NB_APP)
 

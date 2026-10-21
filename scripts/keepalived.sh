@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Extension E1 — IP virtuelle partagée entre lb1 et lb2 (VRRP, keepalived).
+# Extension E1 - IP virtuelle partagée entre lb1 et lb2 (VRRP, keepalived).
 # Responsable : rôle A, avec le rôle D (commit de rotation)
 # Activée par AVEC_LB2=1. Démonstration : `vagrant halt lb1` (scénario V6).
 source /vagrant/scripts/lib.sh
@@ -15,7 +15,7 @@ if [ "$MON_IP" = "$LB1_IP" ]; then PAIR="$LB2_IP"; else PAIR="$LB1_IP"; fi
 
 tmp=$(mktemp)
 cat > "$tmp" <<EOF
-# Géré par /vagrant/scripts/keepalived.sh — ne pas modifier à la main
+# Géré par /vagrant/scripts/keepalived.sh - ne pas modifier à la main
 global_defs {
     router_id ${MON_NOM}
     script_user root

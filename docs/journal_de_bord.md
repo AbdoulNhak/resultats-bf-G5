@@ -1,6 +1,6 @@
-# Journal de bord — RÉSULTATS-BF
+# Journal de bord - RÉSULTATS-BF
 
-**Groupe 5** · Master 1 Informatique — Virtualisation et Cloud Computing · Dr SOMDA · Rendu le 25 octobre 2026
+**Groupe 5** · Master 1 Informatique - Virtualisation et Cloud Computing · Dr SOMDA · Rendu le 25 octobre 2026
 
 Livrable L3 (1 à 2 pages). Tenu par le rôle B ; chaque membre ajoute ses
 entrées au fil de l'eau, par pull request.
@@ -9,10 +9,10 @@ entrées au fil de l'eau, par pull request.
 
 | Membre | Rôle | Périmètre | Extension | Commit hors domaine (rotation) |
 |---|---|---|---|---|
-| … | A — Architecte réseau, répartition et intégration | Vagrantfile, HAProxy, sonde de santé, Git, reconstruction (R1, R3, R4, R8) | E1 | Script de charge `tests/v3_charge.sh` |
-| … | B — Ingénieur applicatif, sécurité et documentation | Application, secrets, pare-feu, README, dossier, journal (R7, R8) | — | Relecture de `scripts/bascule.sh` |
-| … | C — Ingénieur données | PostgreSQL, jeu de données, réplication, bascule (R5, R6) | E3 (réserve) | Requête SQL de `/resultat` |
-| … | D — Essais et observabilité | Scénarios V1 à V6, mesures, idempotence (R2) | E2 | Provisionnement de lb2 (`keepalived.sh`) |
+| … | A - Architecte réseau, répartition et intégration | Vagrantfile, HAProxy, sonde de santé, Git, reconstruction (R1, R3, R4, R8) | E1 | Script de charge `tests/v3_charge.sh` |
+| … | B - Ingénieur applicatif, sécurité et documentation | Application, secrets, pare-feu, README, dossier, journal (R7, R8) | - | Relecture de `scripts/bascule.sh` |
+| … | C - Ingénieur données | PostgreSQL, jeu de données, réplication, bascule (R5, R6) | E3 (réserve) | Requête SQL de `/resultat` |
+| … | D - Essais et observabilité | Scénarios V1 à V6, mesures, idempotence (R2) | E2 | Provisionnement de lb2 (`keepalived.sh`) |
 
 **Organisation.** Un ticket GitHub (issue) par tâche, rattaché à un jalon
 (J1 : 7 oct., J2 : 13 oct., J3 : 19 oct., rendu : 25 oct.). Chaque membre crée
@@ -40,9 +40,9 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | Date | Difficulté | Solution | Qui |
 |---|---|---|---|
 | 03/10 | Section « Pull Requests » introuvable dans les réglages GitHub | Elle se trouve dans les réglages du **dépôt** (onglet Settings du dépôt), pas dans ceux du compte ; réglage aussi possible par `gh api` | B |
-| | `[À COMPLÉTER — ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
+| | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan
 
-`[À RÉDIGER en fin de projet — 5 à 6 lignes : ce qui a bien fonctionné dans
+`[À RÉDIGER en fin de projet - 5 à 6 lignes : ce qui a bien fonctionné dans
 l'organisation, ce que nous changerions, ce que chacun a appris]`

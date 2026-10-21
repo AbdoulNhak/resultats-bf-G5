@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Provisionnement commun à toutes les machines.
-# Responsable : rôle A (intégration) — node_exporter : rôle D (E2)
+# Responsable : rôle A (intégration) - node_exporter : rôle D (E2)
 source /vagrant/scripts/lib.sh
 
 PAQUETS=(curl ca-certificates python3-yaml apache2-utils)
@@ -30,7 +30,7 @@ open(sys.argv[1], "w").write("\n".join(garde + bloc) + "\n")
 PY
 installer_fichier "$tmp" /etc/hosts 644 || true
 
-# Pare-feu (R8) — rôle B. Désactivé par défaut tant qu'il n'est pas testé.
+# Pare-feu (R8) - rôle B. Désactivé par défaut tant qu'il n'est pas testé.
 if [ "${PAREFEU:-0}" = "1" ]; then
   bash /vagrant/scripts/parefeu.sh
 fi

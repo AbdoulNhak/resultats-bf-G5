@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lb1 / lb2 — répartiteur de charge HAProxy.
+# lb1 / lb2 - répartiteur de charge HAProxy.
 # Responsable : rôle A (architecte réseau et répartition)
 # Exécuté à CHAQUE `vagrant up` (run: "always") pour suivre NB_APP (R3).
 source /vagrant/scripts/lib.sh

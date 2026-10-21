@@ -1,16 +1,16 @@
-# Dossier d'architecture — RÉSULTATS-BF
+# Dossier d'architecture - RÉSULTATS-BF
 
-**Groupe 5** · Master 1 Informatique — Virtualisation et Cloud Computing · Enseignant : Dr SOMDA Flavien Hervé · IBAM, Université Joseph Ki-Zerbo · Rendu le 25 octobre 2026
+**Groupe 5** · Master 1 Informatique - Virtualisation et Cloud Computing · Enseignant : Dr SOMDA Flavien Hervé · IBAM, Université Joseph Ki-Zerbo · Rendu le 25 octobre 2026
 
 | Membre | Rôle |
 |---|---|
-| … | A — Architecte réseau, répartition et intégration |
-| … | B — Ingénieur applicatif, sécurité et documentation |
-| … | C — Ingénieur données |
-| … | D — Essais et observabilité |
+| … | A - Architecte réseau, répartition et intégration |
+| … | B - Ingénieur applicatif, sécurité et documentation |
+| … | C - Ingénieur données |
+| … | D - Essais et observabilité |
 
 > **Statut du document** : brouillon tenu par le rôle B. Les passages marqués
-> `[À COMPLÉTER — rôle X]` attendent l'information du membre concerné ; les
+> `[À COMPLÉTER - rôle X]` attendent l'information du membre concerné ; les
 > passages marqués `[MESURE]` ne doivent être remplis qu'avec des chiffres
 > produits par les scripts de `tests/` (sortie brute conservée dans `resultats/`).
 
@@ -55,7 +55,7 @@ poste avec `vagrant destroy -f` puis `vagrant up`, sans aucun geste manuel.
 | Contrainte | Valeur retenue |
 |---|---|
 | Outils | Vagrant 2.4 + VirtualBox 7, sur poste personnel |
-| Boîte | `bento/ubuntu-24.04`, version épinglée `[À COMPLÉTER — rôle A : version retenue]` |
+| Boîte | `bento/ubuntu-24.04`, version épinglée `[À COMPLÉTER - rôle A : version retenue]` |
 | Réseau | Sous-réseau du groupe 5 : `192.168.60.0/24` (plage hôte-seul autorisée par défaut par VirtualBox) |
 | Mémoire | Socle obligatoire ≤ 3 Go (5 VM : 2 × 768 Mo + 3 × 512 Mo = 3 072 Mo) |
 | Coût | Aucun : ni compte cloud, ni image construite à la main |
@@ -80,7 +80,7 @@ poste avec `vagrant destroy -f` puis `vagrant up`, sans aucun geste manuel.
 
 ![Architecture cible de RÉSULTATS-BF](architecture.png)
 
-*Figure 1 — Architecture cible. Traits pleins : socle obligatoire ; pointillés : extensions E1 et E2.*
+*Figure 1 - Architecture cible. Traits pleins : socle obligatoire ; pointillés : extensions E1 et E2.*
 
 ### 2.1 Inventaire des machines virtuelles
 
@@ -88,7 +88,7 @@ poste avec `vagrant destroy -f` puis `vagrant up`, sans aucun geste manuel.
 |---|---|---|---|---|
 | lb1 | Répartiteur HAProxy actif, seul port exposé (hôte 8080 → 80) | 192.168.60.11 | 512 Mo | Obligatoire |
 | lb2 | Répartiteur passif, keepalived | 192.168.60.12 | 512 Mo | Extension E1 |
-| — | IP virtuelle VRRP partagée par lb1 et lb2 | 192.168.60.10 | — | Extension E1 |
+| - | IP virtuelle VRRP partagée par lb1 et lb2 | 192.168.60.10 | - | Extension E1 |
 | app1 … appN | Service applicatif sans état (Flask + gunicorn, port 5000) | 192.168.60.21 … .2N | 512 Mo | Obligatoire, N ≥ 2 |
 | bdd1 | PostgreSQL primaire (lecture et écriture) | 192.168.60.31 | 768 Mo | Obligatoire |
 | bdd2 | PostgreSQL réplique en flux, promouvable | 192.168.60.32 | 768 Mo | Obligatoire |
@@ -145,7 +145,7 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 | **`.env` engendré automatiquement** s'il manque | Demander de copier `.env.exemple` | R1 interdit tout geste manuel ; R7 interdit les secrets dans le dépôt. Les mots de passe sont tirés au hasard au premier `vagrant up`. |
 | **Données PostgreSQL hors de `/vagrant`** | Dossier synchronisé | Les verrous et la durabilité de PostgreSQL ne fonctionnent pas dans un dossier partagé VirtualBox (piège n°3 du sujet). |
 
-`[À COMPLÉTER — rôle A : ajouter tout choix modifié pendant la mise au point]`
+`[À COMPLÉTER - rôle A : ajouter tout choix modifié pendant la mise au point]`
 
 ---
 
@@ -153,10 +153,10 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 
 | Composant | Que se passe-t-il s'il tombe ? | Traitement |
 |---|---|---|
-| Un serveur applicatif | HAProxy l'écarte en ~2 s ; les requêtes en cours sont rejouées sur un autre serveur (`option redispatch`, `retries 2`) | **Supprimé** (N ≥ 2) — scénario V2 |
+| Un serveur applicatif | HAProxy l'écarte en ~2 s ; les requêtes en cours sont rejouées sur un autre serveur (`option redispatch`, `retries 2`) | **Supprimé** (N ≥ 2) - scénario V2 |
 | lb1 (socle seul) | Plus aucun accès au service | **Point unique dans le socle** ; supprimé par l'extension E1 |
-| lb1 (avec E1) | keepalived déplace l'IP virtuelle `.10` vers lb2 | **Supprimé** — scénario V6 |
-| bdd1 | `/sante` renvoie 503 sur tous les serveurs ; HAProxy renvoie une page 503 JSON propre | **Atténué** : bascule manuelle sur bdd2 (R6) — scénario V4 |
+| lb1 (avec E1) | keepalived déplace l'IP virtuelle `.10` vers lb2 | **Supprimé** - scénario V6 |
+| bdd1 | `/sante` renvoie 503 sur tous les serveurs ; HAProxy renvoie une page 503 JSON propre | **Atténué** : bascule manuelle sur bdd2 (R6) - scénario V4 |
 | bdd2 | Plus de réplique : aucun impact sur le service, mais plus de bascule possible | **Accepté** : à reconstruire avec `vagrant destroy -f bdd2 && vagrant up bdd2` |
 | Le poste hôte | Toutes les VM tombent | **Hors périmètre** : limite d'un environnement à une seule machine physique |
 
@@ -169,8 +169,8 @@ Le service (`app/app.py`, moins de 100 lignes) expose trois points d'entrée :
 | Point d'entrée | Réponse normale | En cas de problème |
 |---|---|---|
 | `GET /resultat?matricule=BF000123` | 200 + JSON (matricule, nom, série, moyenne, admis, serveur) | 400 si matricule mal formé ; 404 si inconnu ; 503 JSON si base injoignable |
-| `GET /sante` | 200 si `SELECT 1` réussit | 503 JSON sinon — jamais 200 par principe |
-| `GET /info` | 200 + nom d'hôte du serveur | — |
+| `GET /sante` | 200 si `SELECT 1` réussit | 503 JSON sinon - jamais 200 par principe |
+| `GET /info` | 200 + nom d'hôte du serveur | - |
 
 **Absence d'état.** Le serveur ne garde ni session, ni fichier, ni compteur :
 chaque requête ouvre une connexion, lit, ferme. Tout état vit dans la base.
@@ -180,7 +180,7 @@ Ajouter un serveur est donc trivial et en retirer un est indolore.
 réponse 503 JSON lisible. Le service est géré par systemd (`Restart=always`)
 et écoute sur `0.0.0.0:5000` pour être joignable depuis lb1.
 
-`[À COMPLÉTER — rôle B : exemples de réponses réelles copiées depuis la plateforme]`
+`[À COMPLÉTER - rôle B : exemples de réponses réelles copiées depuis la plateforme]`
 
 ---
 
@@ -209,7 +209,7 @@ bdd1, puis reçoit le journal WAL en continu. Elle est en lecture seule
 (`pg_is_in_recovery() = true`). Un marqueur empêche un nouveau provisionnement
 d'effacer une base déjà promue.
 
-**Vérification de R5** `[À COMPLÉTER — rôle C : commandes exactes et sortie]` :
+**Vérification de R5** `[À COMPLÉTER - rôle C : commandes exactes et sortie]` :
 
 ```bash
 vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c \"INSERT INTO resultats VALUES ('BF999999','Test réplication','C',12.5,true)\""
@@ -227,7 +227,7 @@ vagrant ssh bdd2 -c "sudo -u postgres psql -d resultats -c \"SELECT * FROM resul
 | Cloisonnement réseau (R8) | Seul lb1 a une redirection de port, liée à `127.0.0.1` de l'hôte ; PostgreSQL n'écoute que sur `localhost` et l'IP privée ; `pg_hba.conf` n'accepte que `192.168.60.0/24` |
 | Moindre privilège | Compte PostgreSQL `app` en lecture seule ; service lancé par un compte système sans shell ; options systemd `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp` |
 | Entrées | Matricule validé par expression régulière (`^[A-Z]{2}[0-9]{6}$`) ; requêtes SQL paramétrées (pas d'injection) |
-| Pare-feu | `scripts/parefeu.sh` : ufw par rôle, n'ouvre que les ports nécessaires depuis le sous-réseau `[À COMPLÉTER — rôle B : activé ou non après tests]` |
+| Pare-feu | `scripts/parefeu.sh` : ufw par rôle, n'ouvre que les ports nécessaires depuis le sous-réseau `[À COMPLÉTER - rôle B : activé ou non après tests]` |
 | Historique Git | Vérifié par `git log -p \| grep -iE "password\|passwd"` avant le rendu `[À COMPLÉTER]` |
 
 ---
@@ -283,14 +283,14 @@ bash scripts/bascule.sh
 Aucune modification n'est nécessaire sur les serveurs applicatifs : leur chaîne
 de connexion choisit automatiquement le serveur qui accepte les écritures.
 
-Durée mesurée : `[MESURE — scénario V4]`.
+Durée mesurée : `[MESURE - scénario V4]`.
 
 ### 8.4 Remettre bdd1 en service après une bascule
 
 > ⚠️ Ne **jamais** relancer bdd1 tel quel après une bascule : il redémarrerait
 > en primaire et deux bases accepteraient les écritures (« split brain »).
 
-`[À COMPLÉTER — rôle C : procédure testée pour reconstruire bdd1 comme réplique de bdd2]`
+`[À COMPLÉTER - rôle C : procédure testée pour reconstruire bdd1 comme réplique de bdd2]`
 
 ### 8.5 Panne du répartiteur (E1)
 
@@ -302,7 +302,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 ## 9. Résultats des scénarios V1 à V6
 
-> Conditions de mesure `[À COMPLÉTER — rôle D]` : poste (processeur, RAM,
+> Conditions de mesure `[À COMPLÉTER - rôle D]` : poste (processeur, RAM,
 > système), versions de VirtualBox et Vagrant, emplacement du client de charge
 > (hôte ou VM). Les VM partagent le processeur d'une seule machine : les débits
 > ne sont pas ceux d'un vrai déploiement.
@@ -318,7 +318,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | `[MESURE]` | |
 
-### 9.2 V1 — Répartition
+### 9.2 V1 - Répartition
 
 - **Commande** : `bash tests/v1_repartition.sh` (20 appels à `/info`)
 - **Sortie brute** : `resultats/v1_<date>.txt`
@@ -330,7 +330,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 **Commentaire** : `[À RÉDIGER]`
 
-### 9.3 V2 — Panne d'un serveur applicatif
+### 9.3 V2 - Panne d'un serveur applicatif
 
 - **Commande** : `bash tests/v2_panne_app.sh` (requêtes toutes les 0,1 s pendant 40 s ; `vagrant halt app1` à t = 5 s)
 
@@ -340,7 +340,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 **Commentaire** : `[À RÉDIGER]`
 
-### 9.4 V3 — Montée en charge
+### 9.4 V3 - Montée en charge
 
 - **Commande** : `bash tests/v3_charge.sh` (`ab -n 2000 -c 50`, 3 essais), avec N=2 puis N=4
 
@@ -349,9 +349,9 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 | N = 2 | `[MESURE]` | `[MESURE]` | `[MESURE]` | | |
 | N = 4 | `[MESURE]` | `[MESURE]` | `[MESURE]` | | |
 
-**Commentaire** : `[À RÉDIGER — expliquer honnêtement le résultat, même si le débit n'augmente pas : processeur partagé, coût de la connexion par requête, base unique…]`
+**Commentaire** : `[À RÉDIGER - expliquer honnêtement le résultat, même si le débit n'augmente pas : processeur partagé, coût de la connexion par requête, base unique…]`
 
-### 9.5 V4 — Panne de la base primaire
+### 9.5 V4 - Panne de la base primaire
 
 - **Commande** : `bash tests/v4_panne_bdd.sh` (arrêt de bdd1, lecture de `/sante`, bascule)
 
@@ -361,7 +361,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 **Commentaire** : `[À RÉDIGER]`
 
-### 9.6 V5 — Reconstruction
+### 9.6 V5 - Reconstruction
 
 - **Commande** : `bash tests/v5_reconstruction.sh`
 
@@ -369,7 +369,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 |---|---|---|
 | `[MESURE]` | `[MESURE]` | Aucune |
 
-### 9.7 V6 — Panne du répartiteur (E1)
+### 9.7 V6 - Panne du répartiteur (E1)
 
 - **Commande** : `bash tests/v6_panne_lb.sh` (appels à l'IP virtuelle toutes les 0,2 s ; `vagrant halt lb1` à t = 3 s)
 
@@ -388,7 +388,7 @@ de lb1, sa priorité plus haute (150 contre 100) lui rend l'IP virtuelle.
 
 ## 10. Extensions réalisées
 
-### E1 — Répartiteur redondant
+### E1 - Répartiteur redondant
 
 lb2 exécute la même configuration HAProxy que lb1 (engendrée depuis la même
 source). keepalived partage l'IP virtuelle `192.168.60.10` en VRRP unicast ;
@@ -398,9 +398,9 @@ bascule même si la VM reste allumée.
 
 Activation : `AVEC_LB2=1 vagrant up`. Démonstration : scénario V6.
 
-`[À COMPLÉTER — rôles A et D : captures, difficultés]`
+`[À COMPLÉTER - rôles A et D : captures, difficultés]`
 
-### E2 — Observabilité
+### E2 - Observabilité
 
 La VM obs exécute Prometheus (collecte toutes les 5 s) et Grafana. Chaque VM
 expose ses métriques système (node_exporter, port 9100) ; HAProxy expose ses
@@ -410,7 +410,7 @@ configuré à la main dans l'interface.
 
 Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 
-`[À COMPLÉTER — rôle D : capture du tableau de bord pendant V3 (débit qui monte) et pendant V2 (serveur qui disparaît)]`
+`[À COMPLÉTER - rôle D : capture du tableau de bord pendant V3 (débit qui monte) et pendant V2 (serveur qui disparaît)]`
 
 ---
 
@@ -421,14 +421,14 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | **Bascule de la base manuelle** | Le temps d'indisponibilité dépend de la réaction d'un opérateur | Bascule automatique (Patroni + etcd, ou repmgr) avec détection de panne |
 | **Après bascule, bdd1 reste listée en premier** dans la chaîne de connexion | Chaque nouvelle connexion attend d'abord l'échec vers bdd1 (jusqu'à 2 s) : latence accrue tant que bdd1 n'est pas reconstruite | Adresse virtuelle pour la base, ou proxy de connexions (HAProxy TCP, PgBouncer) qui suit le primaire |
 | **Retour de bdd1 non automatisé** | Risque de « split brain » si bdd1 est relancée sans précaution | Procédure scriptée de reconstruction en réplique (`pg_rewind` ou `pg_basebackup`) |
-| **Réplication asynchrone** | Les dernières écritures non transmises peuvent être perdues lors d'une bascule (RPO > 0) | Réplication synchrone (`synchronous_standby_names`) — acceptable ici car le service est en lecture |
+| **Réplication asynchrone** | Les dernières écritures non transmises peuvent être perdues lors d'une bascule (RPO > 0) | Réplication synchrone (`synchronous_standby_names`) - acceptable ici car le service est en lecture |
 | **Une connexion par requête** | Coût d'ouverture de connexion sur chaque appel, débit limité | Pool externe (PgBouncer) ou cache Redis (extension E3) |
 | **Processeur partagé** entre toutes les VM | Les mesures de V3 sous-estiment le gain de la montée en charge | Mesures sur plusieurs machines physiques |
 | **Port 8080 seulement sur lb1** | Avec E1, si lb1 tombe, il faut passer par l'IP virtuelle `.10` et non plus par `localhost:8080` | Accès client uniquement par l'IP virtuelle |
 | **Pas de chiffrement interne** | Trafic HTTP et PostgreSQL en clair sur le réseau privé | TLS sur HAProxy et PostgreSQL |
 | **Supervision sans alertes** | Une panne se voit sur le tableau de bord, mais personne n'est prévenu | Alertmanager avec règles sur la disponibilité |
 
-`[À COMPLÉTER — tous : limites découvertes pendant les tests]`
+`[À COMPLÉTER - tous : limites découvertes pendant les tests]`
 
 ---
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# V6 — Panne du répartiteur actif (extension E1, AVEC_LB2=1).
+# V6 - Panne du répartiteur actif (extension E1, AVEC_LB2=1).
 # Attendu : le service reste joignable à la même adresse (IP virtuelle).
 # Mesure : temps de reprise après bascule VRRP.
 set -euo pipefail
@@ -18,7 +18,7 @@ done
 wait
 
 {
-  echo "V6 — Panne de lb1 — $(date '+%F %T') — cible $VIP_URL"
+  echo "V6 - Panne de lb1 - $(date '+%F %T') - cible $VIP_URL"
   awk '/PANNE/ { tp = $1; next }
        { total++; if ($2 != "200") { ko++; if (!p) p = $1; d = $1 } }
        END { printf "Requêtes : %d ; en erreur : %d\n", total, ko

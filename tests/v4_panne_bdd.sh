@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# V4 — Panne de la base primaire, puis bascule sur bdd2.
+# V4 - Panne de la base primaire, puis bascule sur bdd2.
 # Attendu : /sante renvoie proprement 503 (JSON), jamais une page blanche ;
 # puis la procédure de bascule rétablit le service.
 # Mesure : temps total de la procédure de bascule.
@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 source tests/config.sh
 
 {
-  echo "V4 — Panne de bdd1 — $(date '+%F %T') — cible $URL"
+  echo "V4 - Panne de bdd1 - $(date '+%F %T') - cible $URL"
   t0=$(horodatage)
   vagrant halt bdd1 >/dev/null 2>&1
   echo "[$(date +%T)] bdd1 arrêtée"

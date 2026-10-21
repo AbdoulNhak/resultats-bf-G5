@@ -1,8 +1,8 @@
-# RÉSULTATS-BF — Groupe 5
+# RÉSULTATS-BF - Groupe 5
 
 Plateforme de consultation des résultats d'examen, résiliente et scalable,
 entièrement décrite en code avec Vagrant et VirtualBox.
-Master 1 Informatique — Virtualisation et Cloud Computing — Dr SOMDA — IBAM, 2026-2027.
+Master 1 Informatique - Virtualisation et Cloud Computing - Dr SOMDA - IBAM, 2026-2027.
 
 > Rendu : **25 octobre 2026**. Sous-réseau du groupe 5 : **192.168.60.0/24**.
 
@@ -47,7 +47,7 @@ curl http://localhost:8080/info                         # même service via la r
 
 | Machine | Adresse | RAM | Rôle |
 |---|---|---|---|
-| lb1 | 192.168.60.11 | 512 Mo | HAProxy actif — seul port exposé vers l'hôte (8080) |
+| lb1 | 192.168.60.11 | 512 Mo | HAProxy actif - seul port exposé vers l'hôte (8080) |
 | lb2 | 192.168.60.12 | 512 Mo | HAProxy passif, IP virtuelle 192.168.60.10 (E1) |
 | app1 … appN | 192.168.60.21 … | 512 Mo | Service Python sans état (Flask + gunicorn, port 5000) |
 | bdd1 | 192.168.60.31 | 768 Mo | PostgreSQL primaire |
@@ -151,7 +151,7 @@ jamais de données PostgreSQL dans `/vagrant`.
 
 | Rôle | Membre |
 |---|---|
-| A — Architecte réseau, répartition et intégration | … |
-| B — Ingénieur applicatif, sécurité et documentation | … |
-| C — Ingénieur données | … |
-| D — Essais et observabilité | … |
+| A - Architecte réseau, répartition et intégration | … |
+| B - Ingénieur applicatif, sécurité et documentation | … |
+| C - Ingénieur données | … |
+| D - Essais et observabilité | … |
