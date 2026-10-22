@@ -453,7 +453,8 @@ bascule même si la VM reste allumée.
 Activation : `AVEC_LB2=1 vagrant up`. Démonstration : scénario V6.
 
 **Difficulté rencontrée** : au premier essai, l'IP virtuelle n'était portée par aucun répartiteur. Le contrôle de HAProxy (`pidof haproxy`) échouait chaque seconde : sur Ubuntu, `pidof` est un lien vers `killall5`, que keepalived exécute sous son vrai nom lorsque `enable_script_security` est activé. Les deux répartiteurs passaient en état FAULT. Le contrôle a été remplacé par `systemctl is-active --quiet haproxy` ; lb1 est alors passé MASTER. Le scénario V6 a ensuite été conforme (voir 9.7).
-`[À COMPLÉTER - rôle A : capture de « ip -o -4 addr show » sur lb2 pendant la panne de lb1]`
+![IP virtuelle sur lb2](captures/lb2_ip_virtuelle_panne_lb1.png)
+*Figure 7 — Pendant la panne de lb1 (`vagrant halt -f lb1`), l'IP virtuelle 192.168.60.10 est portée par lb2 (adresse « secondary » sur eth1) : keepalived l'a déplacée sans intervention.*
 
 ### E2 - Observabilité
 
