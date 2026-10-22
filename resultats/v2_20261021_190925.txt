@@ -1,0 +1,4 @@
+V2 - Panne de app1 - 2026-10-21 19:09:25 - cible http://192.168.60.10
+Requêtes envoyées : 41 ; en erreur : 2 (4.88 %)
+Période dégradée : de 10.0 s à 12.6 s après la panne (durée 2.6 s)
+app1 de retour dans la répartition 144.2 s après le lancement de vagrant up

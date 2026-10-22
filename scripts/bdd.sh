@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bdd1 — base de données primaire (lecture et écriture).
+# bdd1 - base de données primaire (lecture et écriture).
 # Responsable : rôle C (ingénieur données)
 source /vagrant/scripts/lib.sh
 source /vagrant/scripts/pg_commun.sh

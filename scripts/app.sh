@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# app1 … appN — serveurs applicatifs sans état.
+# app1 … appN - serveurs applicatifs sans état.
 # Responsable : rôle B (ingénieur applicatif et sécurité)
 source /vagrant/scripts/lib.sh
 

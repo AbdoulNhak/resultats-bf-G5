@@ -28,7 +28,7 @@ frontend metriques
     http-request use-service prometheus-exporter if {{ path /metrics }}
 """ if promex else ""
 
-print(f"""# Fichier ENGENDRÉ par scripts/generer_haproxy.py — ne pas modifier à la main.
+print(f"""# Fichier ENGENDRÉ par scripts/generer_haproxy.py - ne pas modifier à la main.
 # Source : config/noeuds.yml ({len(apps)} serveurs applicatifs)
 
 global

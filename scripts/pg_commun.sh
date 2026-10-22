@@ -16,7 +16,7 @@ pg_configurer() {
   # Paramètres : fichier entier dans conf.d (inclus par défaut sous Ubuntu)
   local tmp; tmp=$(mktemp)
   cat > "$tmp" <<EOF
-# Géré par /vagrant/scripts/pg_commun.sh — ne pas modifier à la main
+# Géré par /vagrant/scripts/pg_commun.sh - ne pas modifier à la main
 listen_addresses = 'localhost,${MON_IP}'   # réseau privé uniquement (R8)
 wal_level = replica
 max_wal_senders = 5

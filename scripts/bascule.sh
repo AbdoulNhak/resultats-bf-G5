@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Procédure de bascule de la base : promotion de bdd2 en primaire (R6, scénario V4).
-# Responsable : rôle C (ingénieur données) — relecture : rôle B (rotation)
+# Responsable : rôle C (ingénieur données) - relecture : rôle B (rotation)
 #
 # À lancer DEPUIS L'HÔTE, à la racine du dépôt (Linux, macOS ou Git Bash) :
 #   bash scripts/bascule.sh
@@ -9,7 +9,7 @@
 # bdd1 puis bdd2 avec target_session_attrs=read-write ; dès que bdd2 accepte
 # les écritures, ils l'utilisent.
 #
-# ATTENTION — après une bascule, NE PAS redémarrer bdd1 tel quel : il repartirait
+# ATTENTION - après une bascule, NE PAS redémarrer bdd1 tel quel : il repartirait
 # en primaire (deux primaires = « split brain »). Voir docs/ : remise en service
 # de bdd1 comme réplique de bdd2 (TODO rôle C, à documenter dans le dossier).
 set -euo pipefail

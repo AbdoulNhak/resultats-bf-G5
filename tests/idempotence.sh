@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# R2 — Idempotence : `vagrant provision` rejoué deux fois ne modifie rien et n'échoue pas.
+# R2 - Idempotence : `vagrant provision` rejoué deux fois ne modifie rien et n'échoue pas.
 # Responsable : rôle D (essais)
 # Compare l'empreinte des fichiers de configuration de chaque VM entre deux rejeux.
 set -euo pipefail
@@ -21,7 +21,7 @@ empreintes() {
 }
 
 {
-  echo "R2 — Idempotence — $(date '+%F %T') — VM : $(echo $vms)"
+  echo "R2 - Idempotence - $(date '+%F %T') - VM : $(echo $vms)"
   vagrant provision >/dev/null
   empreintes > /tmp/empreintes_1.txt
   vagrant provision >/dev/null

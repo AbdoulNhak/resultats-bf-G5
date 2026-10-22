@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Extension E2 — supervision : Prometheus + Grafana sur la machine obs.
+# Extension E2 - supervision : Prometheus + Grafana sur la machine obs.
 # Responsable : rôle D (essais et observabilité)
 # Activée par AVEC_OBS=1. Grafana : http://192.168.60.41:3000 (admin / GRAFANA_ADMIN_PASSWORD du .env)
 #
