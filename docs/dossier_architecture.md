@@ -327,7 +327,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 |---|---|---|---|---|
 | V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | 5 / 5 / 5 / 5 sur 4 serveurs ; écart 0 % | Conforme |
 | V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 ; période dégradée 2,4 s (au plus 4,4 s) | Conforme |
-| V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | N=4 : 13,2 req/s (41 % d'erreurs 503) puis 45,7 req/s (0 erreur) ; N=2 : `[MESURE]` | |
+| V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | Régime normal : N=2 52,0 à 54,9 req/s, N=4 41,9 à 45,7 req/s, sans erreur ; 3 séries sur 7 en régime dégradé (12 à 13 req/s, réponses 503) | Pas de hausse (baisse de 12 à 24 %), expliquée : base unique saturée (9.4) |
 | V4 Panne de la base primaire | 503 propre ; durée de la bascule | 503 JSON, jamais de page blanche | `[MESURE]` | |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
@@ -360,18 +360,28 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 ### 9.4 V3 - Montée en charge
 
-- **Commande** : `bash tests/v3_charge.sh` (`ab -n 2000 -c 50`, 3 essais précédés d'un échauffement), cible l'IP virtuelle ; `ab` exécuté depuis la VM bdd2 (`ab` absent de Git Bash)
-- **Sorties brutes** : `resultats/v3_n4_20261021_200906.txt` (1re série N=4), `resultats/v3_n4_20261021_202924.txt` (2e série N=4)
+- **Commande** : `bash tests/v3_charge.sh` (`ab -n 2000 -c 50`, 3 essais précédés d'un échauffement de 200 requêtes), cible l'IP virtuelle `192.168.60.10` ; `ab` exécuté depuis la VM bdd2 (absent de Git Bash).
+- **Sorties brutes** : `resultats/v3_n4_20261021_200906.txt`, `resultats/v3_n4_20261021_202924.txt`, `resultats/v3_n2_20261021_221545.txt`, `resultats/v3_n4_20261021_224534.txt`, `resultats/v3_n4_20261022_085331.txt`, `resultats/v3_n4_20261022_0854.txt` (réponses et top de bdd1 pendant la série N=4 du 22/10 à 8 h 53), `resultats/v3_n2_20261022_121554.txt`, `resultats/v3_n2_20261022_134055.txt` et `resultats/v3_bdd1_vmstat_20261022_134120.txt` (charge de bdd1).
 
-| Configuration | Essai 1 (req/s) | Essai 2 (req/s) | Essai 3 (req/s) | Moyenne | Requêtes en échec |
-|---|---|---|---|---|---|
-| N = 2 | `[MESURE]` | `[MESURE]` | `[MESURE]` | | |
-| N = 4 (1re série, 20 h 09) | 14,56 | 12,00 | 13,12 | 13,2 | 2 475 sur 6 000 (41 %) |
-| N = 4 (2e série, 20 h 29) | 47,02 | 44,30 | 45,86 | 45,7 | 0 |
+| Série | Configuration | Essai 1 (req/s) | Essai 2 (req/s) | Essai 3 (req/s) | Moyenne (req/s) | Requêtes en échec |
+|---|---|---|---|---|---|---|
+| 21/10, 20 h 09 | N = 4 | 14,56 | 12,00 | 13,12 | 13,2 | 2 475 sur 6 000 (41 %) |
+| 21/10, 20 h 29 | N = 4 | 47,02 | 44,30 | 45,86 | 45,7 | 0 |
+| 21/10, 22 h 15 | N = 2 | 12,63 | 11,38 | 11,95 | 12,0 | 513 sur 6 000 (8,6 %) |
+| 21/10, 22 h 45 | N = 4 | 12,69 | 14,37 | 11,89 | 13,0 | 2 604 sur 6 000 (43 %) |
+| 22/10, 8 h 53 | N = 4 | 42,79 | 43,75 | 39,23 | 41,9 | 0 |
+| 22/10, 12 h 15 | N = 2 | 55,80 | 51,92 | 56,83 | 54,9 | 0 |
+| 22/10, 13 h 40 | N = 2 | 49,55 | 53,86 | 52,73 | 52,0 | 0 |
 
-Note : la ligne SYNTHESE de `v3_n4_20261021_200906.txt` indique 4 950 échecs : une réponse 503 y était comptée deux fois (« Failed requests » et « Non-2xx responses » d'ab). Le calcul a été corrigé dans `tests/v3_charge.sh` ; le nombre réel d'échecs est 984 + 731 + 760 = 2 475. Le fichier brut n'a pas été modifié.
+Note : la ligne SYNTHESE de `v3_n4_20261021_200906.txt` indique 4 950 échecs, car une réponse 503 y était comptée deux fois (« Failed requests » et « Non-2xx responses » d'ab). Le calcul a été corrigé dans `tests/v3_charge.sh` ; le nombre réel est 984 + 731 + 760 = 2 475. Les séries suivantes ont été produites par le script corrigé. Les fichiers bruts n'ont pas été modifiés.
 
-**Commentaire (provisoire, en attente de la mesure N=2)** : les deux séries à N=4, lancées à 20 minutes d'intervalle avec la même configuration, donnent des résultats très différents. La première (13,2 req/s en moyenne, temps moyen par requête de 3,4 à 4,2 s) renvoie 41 % de réponses 503, entre 37 % et 49 % selon l'essai ; la seconde (45,7 req/s, environ 1,1 s par requête) n'a aucune erreur. La cause des 503 de la première série n'est pas établie : elle a été lancée peu après la création d'app3 et d'app4, alors que la plateforme était peut-être encore occupée. Les deux séries sont conservées. Dans tous les cas, le débit reste modeste : les VM ont 1 processeur chacune et partagent celui du poste, chaque requête ouvre une nouvelle connexion PostgreSQL vers l'unique base bdd1, et le client de charge tourne sur la VM bdd2 (`ab` absent de Git Bash). `[À COMPLÉTER : comparaison avec N=2 et nouvelle série N=4 de contrôle]`
+**Charge de bdd1** pendant la série du 22/10 à 13 h 40 (`vagrant ssh bdd1 -c "vmstat 1 15"`) : pendant 12 secondes consécutives, processeur inactif à 0 %, temps système de 92 à 94 %, temps utilisateur de 6 à 8 %, de 4 à 18 processus en attente pour un seul processeur, de 2 165 à 2 687 interruptions par seconde. (La première ligne de vmstat, moyenne depuis le démarrage, et les deux dernières, prises entre deux essais, ne sont pas retenues.)
+
+**Commentaire** : les sept séries se répartissent en deux régimes. Quatre séries (21/10 à 20 h 29, 22/10 à 8 h 53, 12 h 15 et 13 h 40) se déroulent sans aucune erreur. Trois séries, toutes le 21/10 au soir, tombent à 12 à 13 req/s avec 8,6 % à 43 % de réponses 503. La cause de ce régime dégradé n'est pas établie : l'hypothèse d'un poste encore occupé après une opération Vagrant lourde a été réfutée, la série du 22/10 à 12 h 15, lancée juste après `vagrant provision lb1`, étant sans erreur. Ces trois séries sont publiées mais ne servent pas à la comparaison.
+
+En régime normal, passer de 2 à 4 serveurs applicatifs fait **baisser** le débit : 54,9 et 52,0 req/s avec N=2 contre 45,7 et 41,9 req/s avec N=4, soit une baisse de 12 à 24 %. Le temps moyen par requête passe d'environ 0,9 s à 1,1 à 1,3 s. La mesure de bdd1 explique ce résultat : pendant la charge, son unique processeur est occupé à 100 %, dont 92 à 94 % en temps système et seulement 6 à 8 % en temps utilisateur. Le coût dominant n'est donc pas l'exécution de la requête SQL, mais l'ouverture d'une connexion PostgreSQL (un nouveau processus) pour chaque requête, et le traitement réseau associé. bdd1 est le goulet d'étranglement. Ajouter des serveurs applicatifs augmente seulement le nombre de connexions simultanées qu'elle doit ouvrir (jusqu'à 32 avec N=4 contre 16 avec N=2 : serveurs × 2 processus gunicorn × 4 fils), et donc la concurrence sur son processeur ; les deux VM supplémentaires consomment en outre du processeur sur le poste.
+
+Conclusion : R3 est respectée (un serveur s'ajoute en changeant une seule valeur, voir V1), mais multiplier les serveurs applicatifs n'apporte rien tant que la base reste le goulet. Améliorations, par effet attendu : un pool de connexions externe (PgBouncer) devant PostgreSQL, pour ne plus créer un processus par requête ; un cache des résultats (Redis, extension E3), ceux-ci ne changeant plus après publication ; envoyer les lectures vers la réplique bdd2 ; répartir les VM sur plusieurs machines physiques.
 
 ### 9.5 V4 - Panne de la base primaire
 
@@ -447,7 +457,7 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | **Après bascule, bdd1 reste listée en premier** dans la chaîne de connexion | Chaque nouvelle connexion attend d'abord l'échec vers bdd1 (jusqu'à 2 s) : latence accrue tant que bdd1 n'est pas reconstruite | Adresse virtuelle pour la base, ou proxy de connexions (HAProxy TCP, PgBouncer) qui suit le primaire |
 | **Retour de bdd1 non automatisé** | Risque de « split brain » si bdd1 est relancée sans précaution | Procédure scriptée de reconstruction en réplique (`pg_rewind` ou `pg_basebackup`) |
 | **Réplication asynchrone** | Les dernières écritures non transmises peuvent être perdues lors d'une bascule (RPO > 0) | Réplication synchrone (`synchronous_standby_names`) - acceptable ici car le service est en lecture |
-| **Une connexion par requête** | Coût d'ouverture de connexion sur chaque appel, débit limité | Pool externe (PgBouncer) ou cache Redis (extension E3) |
+| **Une connexion par requête** | Mesuré en V3 : le processeur de bdd1 est saturé, à 92-94 % en temps système ; le débit baisse quand on ajoute des serveurs applicatifs | Pool externe (PgBouncer) ou cache Redis (extension E3) |
 | **Processeur partagé** entre toutes les VM | Les mesures de V3 sous-estiment le gain de la montée en charge | Mesures sur plusieurs machines physiques |
 | **Port 8080 seulement sur lb1** | Avec E1, si lb1 tombe, il faut passer par l'IP virtuelle `.10` et non plus par `localhost:8080` | Accès client uniquement par l'IP virtuelle |
 | **Pas de chiffrement interne** | Trafic HTTP et PostgreSQL en clair sur le réseau privé | TLS sur HAProxy et PostgreSQL |
@@ -455,7 +465,7 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | Mesures lancées depuis Git Bash sous Windows | Une mesure environ toutes les 0,5 s ; durées précises à 2 s près (expiration du client) | Client de mesure Linux dédié avec horodatage fin (`wrk`, `hey`) |
 | Instant de la panne connu à quelques secondes près | `vagrant halt -f` met plusieurs secondes à démarrer sous Windows | Coupure horodatée au plus près (`VBoxManage controlvm <vm> poweroff`, ou `poweroff -f` dans la VM) |
 | Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
-| Débit très variable d'une série à l'autre | Avec N=4, 13,2 req/s puis 45,7 req/s à 20 minutes d'intervalle : les mesures dépendent de l'activité du poste et des VM | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
+| Débit très variable d'une série à l'autre | 3 séries V3 sur 7 en régime dégradé (12 à 13 req/s, réponses 503), cause non établie | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
 
 `[À COMPLÉTER - tous : limites découvertes pendant les tests]`
 

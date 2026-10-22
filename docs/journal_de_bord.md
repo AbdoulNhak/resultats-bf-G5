@@ -50,7 +50,8 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 21/10 | E1 : l'IP virtuelle n'était portée par aucun répartiteur ; le contrôle `pidof haproxy` de keepalived échouait chaque seconde (`pidof` est un lien vers `killall5`, que keepalived exécute sous son vrai nom avec `enable_script_security`) | Contrôle remplacé par `systemctl is-active --quiet haproxy` ; lb1 repasse MASTER, V6 conforme | A |
 | 21/10 | `vagrant destroy -f app3 app4` : « machine not found », car `NB_APP` avait déjà été remis à 2 dans `.env` | `NB_APP=4 vagrant destroy -f app3 app4` (la ligne de commande est prioritaire sur `.env`), puis `vagrant provision lb1` ; procédure corrigée dans le dossier (8.2) | A |
 | 21/10 | V3 : la ligne SYNTHESE comptait deux fois les réponses 503 (« Failed » et « Non-2xx » d'`ab`) | Calcul corrigé dans `tests/v3_charge.sh` ; fichiers bruts conservés tels quels, écart expliqué dans le dossier (9.4) | A |
-| 21/10 | V3 avec N=4 : première série avec 41 % de réponses 503, seconde série sans erreur 20 minutes plus tard | Cause non établie ; les deux séries sont publiées, une série de contrôle est prévue | A, D |
+| 21-22/10 | V3 : 3 séries sur 7 en régime dégradé (12 à 13 req/s, 8,6 % à 43 % de réponses 503), les 4 autres sans erreur | Cause non établie ; séries publiées, comparaison faite sur le régime normal | A, D |
+| 22/10 | V3 : le débit baisse en passant de 2 à 4 serveurs (52,0-54,9 contre 41,9-45,7 req/s) | `vmstat` sur bdd1 : processeur à 100 %, dont 92-94 % en temps système, donc coût de l'ouverture d'une connexion par requête ; goulet identifié (dossier 9.4) | A |
 | | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan

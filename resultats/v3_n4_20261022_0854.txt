@@ -1,0 +1,12 @@
+V3 - Charge - 2026-10-22 08:53:31 - 4 serveurs applicatifs - cible http://192.168.60.10
+ab -n 2000 -c 50, 3 essais
+essai 1 : Failed requests:        0
+essai 1 : Requests per second:    42.79 [#/sec] (mean)
+essai 1 : Time per request:       1168.542 [ms] (mean)
+essai 2 : Failed requests:        0
+essai 2 : Requests per second:    43.75 [#/sec] (mean)
+essai 2 : Time per request:       1142.888 [ms] (mean)
+essai 3 : Failed requests:        0
+essai 3 : Requests per second:    39.23 [#/sec] (mean)
+essai 3 : Time per request:       1274.616 [ms] (mean)
+SYNTHESE n=4 essais=42.79;43.75;39.23 moyenne=41.9 echecs=0
