@@ -326,7 +326,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 | Scénario | Mesure relevée | Attendu | Obtenu | Verdict |
 |---|---|---|---|---|
 | V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | 5 / 5 / 5 / 5 sur 4 serveurs ; écart 0 % | Conforme |
-| V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 ; période dégradée 2,4 s (au plus 4,4 s) | Conforme |
+| V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 (période dégradée 2,4 s) et 2 sur 41 (2,6 s) ; au plus 4,6 s | Conforme |
 | V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | Régime normal : N=2 52,0 à 54,9 req/s, N=4 41,9 à 45,7 req/s, sans erreur ; 3 séries sur 7 en régime dégradé (12 à 13 req/s, réponses 503) | Pas de hausse (baisse de 12 à 24 %), expliquée : base unique saturée (9.4) |
 | V4 Panne de la base primaire | 503 propre ; durée de la bascule | 503 JSON, jamais de page blanche | `[MESURE]` | |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
@@ -346,17 +346,37 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 **Commentaire** : avec quatre serveurs applicatifs, les 20 appels se répartissent exactement à parts égales (5 chacun, écart de 0 % pour 20 % tolérés) : c'est le comportement attendu du tour de rôle (`balance roundrobin`). Ce résultat confirme aussi R3 : app3 et app4 ont été ajoutés en changeant une seule valeur (`NB_APP=4` dans `.env`), et HAProxy les a pris en compte sans modification manuelle, sa configuration étant réengendrée depuis `config/noeuds.yml` à chaque `vagrant up`.
 
+![Répartition sur 4 serveurs](captures/v1_repartition_4_serveurs.png)
+*Figure 2 — Sortie de `tests/v1_repartition.sh` avec NB_APP=4 : 5 réponses par serveur, écart de 0 %.*
+
+![HAProxy avec 4 serveurs](captures/haproxy_stats_4_serveurs_up.png)
+*Figure 3 — Page de statistiques HAProxy après `NB_APP=4` : app3 et app4 ajoutés automatiquement, les 4 serveurs UP (sonde `L7OK/200`). Aucune modification manuelle de la configuration (R3).*
+
 ### 9.3 V2 - Panne d'un serveur applicatif
 
 - **Commande** : `bash tests/v2_panne_app.sh` (requêtes toutes les 0,1 s pendant 40 s ; `vagrant halt -f app1` à t = 5 s ; relance automatique d'app1 en fin de scénario)
 - Extinction forcée : simule une panne brutale et ne dépend pas de SSH.
-- **Sortie brute** : `resultats/v2_20261021_011336.txt`
+- **Sorties brutes** : `resultats/v2_20261021_011336.txt` (1re exécution, cible lb1) et `resultats/v2_20261021_190925.txt` (2e exécution, cible l'IP virtuelle avec E1 active)
 
-| Requêtes envoyées | En erreur | Taux d'erreur | Période dégradée |
-|---|---|---|---|
-| 76 | 2 | 2,63 % | 2,4 s (de 8,6 s à 11,0 s après le déclenchement) |
+| Exécution | Requêtes envoyées | En erreur | Taux d'erreur | Période dégradée |
+|---|---|---|---|---|
+| 21/10, 1 h 13 | 76 | 2 | 2,63 % | 2,4 s (de 8,6 s à 11,0 s après le déclenchement) |
+| 21/10, 19 h 09 | 41 | 2 | 4,88 % | 2,6 s (de 10,0 s à 12,6 s après le déclenchement) |
 
 **Commentaire** : HAProxy a écarté app1 sans intervention : seules 2 requêtes sur 76 ont échoué, toutes dans une fenêtre de 2,4 s. Chaque requête du client expirant au bout de 2 s, la période dégradée réelle est comprise entre 2,4 s et 4,4 s, donc sous les 5 s exigées. Cet ordre de grandeur correspond au réglage de la sonde : serveur écarté après 2 échecs consécutifs à 1 s d'intervalle (`inter 1s fall 2`), plus le délai de détection d'une machine éteinte, qui ne renvoie aucun refus de connexion. Les 2 erreurs sont vraisemblablement des expirations côté client (2 s) pendant que HAProxy rejouait la requête sur app2 (`retries 2`, `option redispatch`) : un client plus patient aurait obtenu une réponse plus lente plutôt qu'une erreur. Les erreurs n'apparaissent que 8,6 s après le déclenchement : ce délai inclut le démarrage de la commande `vagrant halt -f` sous Windows ; l'instant exact de la coupure n'est donc pas connu et seule la durée de la période dégradée est significative. Relancé automatiquement, app1 est revenu dans la répartition 57,3 s après le lancement de `vagrant up app1`, démarrage de la VM compris.
+
+La seconde exécution, lancée sur l'IP virtuelle avec l'extension E1 active, confirme ce résultat : 2 erreurs sur 41 requêtes, période dégradée de 2,6 s (au plus 4,6 s avec l'expiration de 2 s du client). Avec plus de VM allumées, app1 est revenu dans la répartition 144,2 s après le lancement de `vagrant up app1`.
+
+La page de statistiques HAProxy (figures ci-dessous) montre le mécanisme. Avant la panne, app1 et app2 sont UP (sonde `L7OK/200`, environ 100 ms). Après la coupure d'app1, la sonde échoue en `L4TOUT in 1009ms` : la VM éteinte ne répond même plus à l'ouverture de connexion TCP, et la sonde abandonne au bout de 1 s. app1 passe DOWN et sort de la répartition. La colonne `Redis` d'app1 vaut 2 : deux requêtes qui lui étaient destinées ont été renvoyées vers app2 (`option redispatch`).
+
+![Statistiques avant la panne](captures/haproxy_stats_2_serveurs_up.png)
+*Figure 4 — HAProxy avant la panne : app1 et app2 UP.*
+
+![app1 DOWN](captures/haproxy_stats_app1_down.png)
+*Figure 5 — HAProxy après `vagrant halt -f app1` : app1 DOWN (`L4TOUT in 1009ms`), 2 requêtes redistribuées (`Redis` = 2), app2 seul en service.*
+
+![Sortie V2](captures/v2_panne_app1_20261021_190925.png)
+*Figure 6 — Sortie de `tests/v2_panne_app.sh` (exécution du 21/10 à 19 h 09).*
 
 ### 9.4 V3 - Montée en charge
 
