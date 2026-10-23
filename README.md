@@ -68,6 +68,7 @@ Aucune adresse de serveur applicatif n'est écrite en dur.
 | Activer la supervision (E2) | `AVEC_OBS=1 vagrant up` puis http://192.168.60.41:3000 |
 | Rejouer le provisionnement (R2) | `vagrant provision` |
 | Bascule de la base sur bdd2 (R6) | `bash scripts/bascule.sh` |
+| Remettre bdd1 comme réplique de bdd2 | `bash scripts/remise_en_service.sh` |
 | Tout reconstruire (R1) | `vagrant destroy -f && vagrant up` |
 
 > Pendant le développement, n'allumez pas tout en même temps : socle d'abord,
@@ -87,6 +88,7 @@ sa sortie brute dans `resultats/`.
 | V5 Reconstruction | `bash tests/v5_reconstruction.sh` |
 | V6 Panne du répartiteur (E1) | `bash tests/v6_panne_lb.sh` |
 | R2 Idempotence | `bash tests/idempotence.sh` |
+| Vérifications données, réplication et `/resultat` (rôle C) | `bash tests/role_c.sh` |
 
 ## 6. Arborescence
 
@@ -120,7 +122,10 @@ resultats/               sorties brutes des scénarios
   force LF, refaire un `git clone` propre.
 - **HAProxy ne voit pas les nouveaux serveurs** : `vagrant provision lb1`.
 - **Après une bascule** : ne pas redémarrer `bdd1` tel quel (il repartirait en
-  primaire). Voir la procédure de remise en service dans le dossier.
+  primaire). Après la promotion de `bdd2`, lancer `bash scripts/remise_en_service.sh`.
+  La procédure demande confirmation, efface les données de `bdd1` et les
+  reconstruit depuis `bdd2`. Garder les écritures applicatives suspendues durant
+  cette opération.
 
 ## 8. Contribuer
 

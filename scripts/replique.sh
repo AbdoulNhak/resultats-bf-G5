@@ -16,7 +16,12 @@ if [ ! -f "$MARQUEUR" ]; then
 
   journal "copie initiale depuis bdd1 (pg_basebackup)"
   systemctl stop postgresql
-  rm -rf "${PG_DATA:?}"/*
+  find "${PG_DATA:?}" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+  printf '%s:%s:replication:%s:%s\n' \
+    "$BDD1_IP" 5432 replicateur "$PG_REPL_PASSWORD" \
+    | sudo -u postgres tee /var/lib/postgresql/.pgpass >/dev/null
+  chmod 600 /var/lib/postgresql/.pgpass
+  chown postgres:postgres /var/lib/postgresql/.pgpass
   sudo -u postgres env PGPASSWORD="$PG_REPL_PASSWORD" \
     pg_basebackup -h "$BDD1_IP" -U replicateur -D "$PG_DATA" -R -X stream
   # -R écrit standby.signal + primary_conninfo : bdd2 démarre en réplique

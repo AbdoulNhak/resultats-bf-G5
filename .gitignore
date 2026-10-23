@@ -1,5 +1,6 @@
 # Secrets (R7) : seul .env.exemple est versionné
 .env
+node_modules/
 # État local de Vagrant
 .vagrant/
 *.log
