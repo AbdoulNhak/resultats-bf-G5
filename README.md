@@ -90,6 +90,22 @@ sa sortie brute dans `resultats/`.
 | R2 Idempotence | `bash tests/idempotence.sh` |
 | Vérifications données, réplication et `/resultat` (rôle C) | `bash tests/role_c.sh` |
 
+### Remise en service de bdd1 après une bascule (R6)
+
+Après la promotion de bdd2, nous ne redémarrons pas bdd1 comme si de rien
+n'était : les deux serveurs pourraient accepter des écritures et diverger.
+Nous avons retenu une reconstruction complète de bdd1 depuis bdd2, après
+confirmation explicite, avec `pg_basebackup`. Cette opération efface les
+données locales de bdd1 ; nous suspendons donc les écritures applicatives
+pendant sa durée.
+
+1. Lancer `bash scripts/remise_en_service.sh` depuis la racine du dépôt.
+2. Confirmer l'effacement de bdd1 en saisissant `bdd1`.
+3. Si bdd1 est arrêtée, la démarrer sans relancer son provisionnement :
+   `vagrant up --no-provision bdd1`.
+4. Une fois bdd1 joignable en SSH, continuer le script et vérifier qu'il
+   confirme le mode réplique et le flux WAL `streaming`.
+
 ## 6. Arborescence
 
 ```
