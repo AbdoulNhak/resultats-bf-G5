@@ -210,6 +210,26 @@ Les 50 000 lignes sont engendrées par `generate_series`, avec une graine fixe
 (`setseed(0.42)`) : le jeu de données est identique sur tous les postes, ce qui
 rend les mesures comparables. Le compte `app` n'a que le droit `SELECT`.
 
+**Vérification du ticket 6** (effectuée le 25/10/2026) :
+
+```bash
+vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c 'SELECT count(*) FROM resultats'"
+vagrant ssh bdd2 -c "sudo -u postgres psql -d resultats -c 'SELECT count(*) FROM resultats'"
+vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c \"SET ROLE app; SELECT count(*) FROM resultats;\""
+```
+
+Les deux bases contiennent 50 000 lignes et `app` peut les lire. Une tentative
+d'insertion après `SET ROLE app` a échoué avec `permission denied for table
+resultats`; les contrôles PostgreSQL confirment `SELECT = true` et
+`INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER = false` sur cette table.
+Le rôle n'est ni superutilisateur, ni autorisé à créer des bases ou des rôles.
+Le privilège `TEMP` de la base est hérité de `PUBLIC` ; il permet uniquement
+des tables temporaires et ne donne pas de droit d'écriture sur `resultats`.
+
+Le répertoire PostgreSQL est `/var/lib/postgresql/16/main`, distinct du dossier
+partagé `/vagrant` : les fichiers de données ne sont pas placés dans le partage
+Vagrant.
+
 ### 6.2 Réplication
 
 bdd2 est initialisée une seule fois par `pg_basebackup -R -X stream` depuis
@@ -217,12 +237,35 @@ bdd1, puis reçoit le journal WAL en continu. Elle est en lecture seule
 (`pg_is_in_recovery() = true`). Un marqueur empêche un nouveau provisionnement
 d'effacer une base déjà promue.
 
-**Vérification de R5** `[À COMPLÉTER - rôle C : commandes exactes et sortie]` :
+**Vérification de R5** (effectuée le 25/10/2026). Depuis Git Bash, à la racine
+du dépôt :
 
 ```bash
-vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c \"INSERT INTO resultats VALUES ('BF999999','Test réplication','C',12.5,true)\""
-vagrant ssh bdd2 -c "sudo -u postgres psql -d resultats -c \"SELECT * FROM resultats WHERE matricule='BF999999'\""
+printf '%s\n' "SELECT pg_is_in_recovery();" |
+  vagrant ssh bdd2 -c "sudo -u postgres psql -X -P pager=off -tA"
+# Résultat attendu et observé : t
+
+printf '%s\n' "SELECT application_name, client_addr, state, sync_state FROM pg_stat_replication;" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -F '|' -tA"
+# Résultat observé : 16/main|192.168.60.32|streaming|async
+
+printf '%s\n' "INSERT INTO resultats (matricule, nom, serie, moyenne, admis) VALUES ('BF999999', 'Test replication', 'C', 12.50, true);" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -v ON_ERROR_STOP=1 -d resultats"
+# Résultat observé : INSERT 0 1
+
+printf '%s\n' "SELECT matricule || '|' || nom || '|' || serie || '|' || moyenne::text || '|' || admis::text FROM resultats WHERE matricule = 'BF999999';" |
+  vagrant ssh bdd2 -c "sudo -u postgres psql -X -P pager=off -tA -v ON_ERROR_STOP=1 -d resultats"
+# Résultat observé : BF999999|Test replication|C|12.50|true
+
+# Nettoyage du résultat de test ; la suppression est elle aussi répliquée.
+printf '%s\n' "DELETE FROM resultats WHERE matricule = 'BF999999';" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -v ON_ERROR_STOP=1 -d resultats"
+# Après propagation, le nombre de résultats est revenu à 50000 sur les deux bases.
 ```
+
+Après ce contrôle, `pg_stat_replication` sur bdd1 indiquait bien bdd2 en état
+`streaming`. Le contrôle final a confirmé 50 000 lignes sur bdd1 et bdd2 et
+aucun `BF999999` résiduel.
 
 ---
 
@@ -295,15 +338,100 @@ bash scripts/bascule.sh
 
 Aucune modification n'est nécessaire sur les serveurs applicatifs : leur chaîne
 de connexion choisit automatiquement le serveur qui accepte les écritures.
-
-Durée mesurée : `[MESURE - scénario V4]`.
+Le script attend au plus 60 secondes le retour de `/sante` ; au-delà, il s'arrête
+avec une erreur au lieu d'attendre indéfiniment.
 
 ### 8.4 Remettre bdd1 en service après une bascule
 
 > ⚠️ Ne **jamais** relancer bdd1 tel quel après une bascule : il redémarrerait
 > en primaire et deux bases accepteraient les écritures (« split brain »).
 
-`[À COMPLÉTER - rôle C : procédure testée pour reconstruire bdd1 comme réplique de bdd2]`
+La remise en service est manuelle. Elle efface l'ancien répertoire de données
+PostgreSQL de bdd1 et le remplace par une copie de la base primaire bdd2. Cette
+procédure ne doit être lancée qu'après avoir vérifié que bdd2 est primaire.
+Pendant toute l'opération, les services applicatifs restent arrêtés afin
+d'empêcher les écritures sur l'ancienne bdd1 lorsqu'elle redémarre.
+
+Depuis Git Bash, à la racine du dépôt :
+
+1. Arrêter les écritures applicatives :
+
+   ```bash
+   for vm in $(vagrant status --machine-readable | awk -F, '$3 == "state" && $4 == "running" && $2 ~ /^app[0-9]+$/ { print $2 }'); do
+     vagrant ssh "$vm" -c "sudo systemctl stop resultats"
+   done
+   ```
+
+2. Vérifier que bdd2 est bien primaire. La commande doit afficher `f`
+   (`pg_is_in_recovery() = false`) :
+
+   ```bash
+   vagrant ssh bdd2 -c "sudo -u postgres psql -qtAc 'SELECT pg_is_in_recovery()'"
+   ```
+
+   Si bdd2 n'est pas accessible ou n'affiche pas `f`, arrêter ici et ne pas
+   redémarrer bdd1.
+
+3. Démarrer bdd1 sans rejouer son provisionnement. Les serveurs applicatifs
+   doivent rester arrêtés :
+
+   ```bash
+   vagrant up --no-provision bdd1
+   ```
+
+4. Préparer sur bdd1 le fichier d'identifiants PostgreSQL. Le mot de passe est
+   lu depuis `.env` et n'est pas affiché :
+
+   ```bash
+   PG_REPL_PASSWORD=$(sed -n 's/^PG_REPL_PASSWORD=//p' .env)
+   test -n "$PG_REPL_PASSWORD"
+   printf '192.168.60.32:5432:replication:replicateur:%s\n' "$PG_REPL_PASSWORD" |
+     vagrant ssh bdd1 -c "sudo bash -c 'umask 077; cat > /var/lib/postgresql/.pgpass; chown postgres:postgres /var/lib/postgresql/.pgpass; chmod 600 /var/lib/postgresql/.pgpass'"
+   ```
+
+   L'adresse `192.168.60.32` correspond au groupe 5 ; l'adapter si `GROUPE`
+   a été changé.
+
+5. Arrêter PostgreSQL sur bdd1, remplacer ses données par une copie de bdd2,
+   puis redémarrer PostgreSQL en mode réplique :
+
+   ```bash
+   vagrant ssh bdd1 -c "sudo bash -s" <<'REMOTE'
+   set -euo pipefail
+   PG_VER=$(find /etc/postgresql -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -1)
+   PG_DATA="/var/lib/postgresql/$PG_VER/main"
+   systemctl stop postgresql
+   find "$PG_DATA" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+   sudo -u postgres pg_basebackup -h 192.168.60.32 -U replicateur -D "$PG_DATA" -R -X stream
+   systemctl start postgresql
+   REMOTE
+   ```
+
+6. Vérifier que bdd1 est une réplique (`t`) et que la réception WAL est active
+   (`streaming`) :
+
+   ```bash
+   vagrant ssh bdd1 -c "sudo -u postgres psql -qtAc 'SELECT pg_is_in_recovery()'"
+   vagrant ssh bdd1 -c "sudo -u postgres psql -qtAc 'SELECT status FROM pg_stat_wal_receiver'"
+   ```
+
+   Ne redémarrer les applications que si les résultats sont respectivement
+   `t` et `streaming` :
+
+   ```bash
+   for vm in $(vagrant status --machine-readable | awk -F, '$3 == "state" && $4 == "running" && $2 ~ /^app[0-9]+$/ { print $2 }'); do
+     vagrant ssh "$vm" -c "sudo systemctl start resultats"
+   done
+   ```
+
+Cette procédure n'est pas automatisée. Elle a été appliquée après le scénario
+V4 du 25/10/2026 : bdd2 était primaire, bdd1 a été copiée depuis bdd2, puis les
+contrôles ont donné `pg_is_in_recovery() = t`, WAL `streaming` et 50 000
+résultats. Les applications ont ensuite été redémarrées et `/sante` a répondu
+200. Si `pg_basebackup` ou une vérification échoue, laisser les applications
+arrêtées et ne pas démarrer bdd1 comme primaire. Le scénario V4 arrête bdd1 et
+la laisse arrêtée après la bascule ; exécuter cette procédure avant de
+reprendre l'exploitation normale.
 
 ### 8.5 Panne du répartiteur (E1)
 
@@ -328,7 +456,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 | V1 Répartition | Écart entre le serveur le plus et le moins sollicité | < 20 % | 5 / 5 / 5 / 5 sur 4 serveurs ; écart 0 % | Conforme |
 | V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 (période dégradée 2,4 s) et 2 sur 41 (2,6 s) ; au plus 4,6 s | Conforme |
 | V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | Régime normal : N=2 52,0 à 54,9 req/s, N=4 41,9 à 45,7 req/s, sans erreur ; 3 séries sur 7 en régime dégradé (12 à 13 req/s, réponses 503) | Pas de hausse (baisse de 12 à 24 %), expliquée : base unique saturée (9.4) |
-| V4 Panne de la base primaire | 503 propre ; durée de la bascule | 503 JSON, jamais de page blanche | `[MESURE]` | |
+| V4 Panne de la base primaire | 503 JSON pendant la panne, service rétabli et durée mesurée | 503 JSON, puis `/sante` et `/resultat` à 200 après bascule | 503 JSON ; service rétabli en 38,4 s (48,9 s depuis l'arrêt de bdd1) ; `/sante` et `/resultat` à 200 | Conforme |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
 
@@ -405,13 +533,23 @@ Conclusion : R3 est respectée (un serveur s'ajoute en changeant une seule valeu
 
 ### 9.5 V4 - Panne de la base primaire
 
-- **Commande** : `bash tests/v4_panne_bdd.sh` (arrêt de bdd1, lecture de `/sante`, bascule)
+- **Commande** : `bash tests/v4_panne_bdd.sh` depuis Git Bash (vérifie l'état initial,
+  arrête bdd1, exige un 503 JSON pendant la panne, lance la bascule, puis exige
+  `/sante` et la lecture d'un résultat à 200).
+- Le test refuse de couper bdd1 si les bases, au moins un serveur applicatif et
+  un répartiteur ne sont pas démarrés, ou si `/sante` ne répond pas déjà 200.
+- **Sortie brute** : `resultats/v4_20261025_164938.txt`
 
 | Réponse de `/sante` pendant la panne | Durée de la procédure de bascule | Temps total depuis l'arrêt de bdd1 |
 |---|---|---|
-| `[MESURE]` | `[MESURE]` | `[MESURE]` |
+| HTTP 503, `application/json`, statut `indisponible` | 38,4 s | 48,9 s |
 
-**Commentaire** : `[À RÉDIGER]`
+**Résultat** : après l'arrêt de bdd1, l'API a renvoyé le 503 JSON attendu.
+`scripts/bascule.sh` a promu bdd2 ; `/sante` est revenu à HTTP 200 et
+`/resultat?matricule=BF000123` a renvoyé le résultat à HTTP 200. Après V4,
+bdd1 a été reconstruite comme réplique de bdd2 avant le redémarrage des
+applications ; le flux WAL était `streaming` et les deux bases contenaient
+50 000 lignes. L'environnement est ainsi revenu à son état nominal.
 
 ### 9.6 V5 - Reconstruction
 
