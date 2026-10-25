@@ -18,7 +18,8 @@ mkdir -p resultats
 
 horodatage() { date +%s.%N; }
 duree() { awk -v a="$1" -v b="$2" 'BEGIN { printf "%.1f", b - a }'; }
-code_http() { curl -s -o /dev/null -m 2 -w '%{http_code}' "$1" || true; }
+# Délai max d'un appel ; à allonger après une bascule (chaque connexion essaie bdd1 pendant 2 s)
+code_http() { curl -s -o /dev/null -m "${DELAI_HTTP:-2}" -w '%{http_code}' "$1" || true; }
 
 # Exécute ab depuis l'hôte s'il est installé, sinon depuis bdd2 (apache2-utils
 # y est installé par commun.sh). À préciser dans le dossier : où tourne le client.
