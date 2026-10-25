@@ -448,7 +448,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 ## 9. Résultats des scénarios V1 à V6
 
-> Client de mesure : poste hôte (Lenovo ThinkPad P1 Gen 7, Windows), scripts de tests/ lancés depuis Git Bash. Les pannes sont simulées par `vagrant halt -f` (extinction forcée : panne brutale, indépendante de SSH). Chaque requête du client expire au bout de 2 s (`curl -m 2`, tests/config.sh) : les durées mesurées sont donc précises à 2 s près. Sous Git Bash, un tour de boucle de mesure prend environ 0,5 s (lancement des processus sous Windows) au lieu des 0,1 s (V2) et 0,2 s (V6) prévus. Les VM partagent le processeur d'une seule machine : les débits ne sont pas ceux d'un vrai déploiement. `[À COMPLÉTER - rôle D : processeur, RAM, versions de VirtualBox et Vagrant]`
+> Client de mesure : poste hôte (Lenovo ThinkPad P1 Gen 7, Windows), scripts de tests/ lancés depuis Git Bash. Les pannes sont simulées par `vagrant halt -f` (extinction forcée : panne brutale, indépendante de SSH). Chaque requête du client expire au bout de 2 s (`curl -m 2`, tests/config.sh) : les durées mesurées sont donc précises à 2 s près. Sous Git Bash, un tour de boucle de mesure prend environ 0,5 s (lancement des processus sous Windows) au lieu des 0,1 s (V2) et 0,2 s (V6) prévus. Les VM partagent le processeur d'une seule machine : les débits ne sont pas ceux d'un vrai déploiement. Poste hôte des mesures V1, V2, V3, V5, V6 et de l'idempotence : Lenovo ThinkPad P1 Gen 7, processeur Intel Core Ultra 9 185H (2,30 GHz), 32 Go de RAM, Windows ; VirtualBox 7.2.16, Vagrant 2.4.9 ; scripts lancés depuis Git Bash ; `ab` (V3) exécuté depuis la VM bdd2. V4 a été mesuré sur le poste du rôle C.
 
 ### 9.1 Synthèse
 
@@ -458,7 +458,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 | V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 (période dégradée 2,4 s) et 2 sur 41 (2,6 s) ; au plus 4,6 s | Conforme |
 | V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | Régime normal : N=2 52,0 à 54,9 req/s, N=4 41,9 à 45,7 req/s, sans erreur ; 3 séries sur 7 en régime dégradé (12 à 13 req/s, réponses 503) | Pas de hausse (baisse de 12 à 24 %), expliquée : base unique saturée (9.4) |
 | V4 Panne de la base primaire | 503 JSON pendant la panne, service rétabli et durée mesurée | 503 JSON, puis `/sante` et `/resultat` à 200 après bascule | 503 JSON ; service rétabli en 38,4 s (48,9 s depuis l'arrêt de bdd1) ; `/sante` et `/resultat` à 200 | Conforme |
-| V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
+| V5 Reconstruction | Durée totale | Sans intervention | 969 s (16 min 9 s), sans intervention | Conforme |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
 | R2 Idempotence | Fichiers modifiés par un second `vagrant provision` | Aucun | 0 sur 18 empreintes | Conforme |
 
@@ -556,10 +556,13 @@ applications ; le flux WAL était `streaming` et les deux bases contenaient
 ### 9.6 V5 - Reconstruction
 
 - **Commande** : `bash tests/v5_reconstruction.sh`
+- **Sortie brute** : `resultats/v5_20261025_181605.txt`
 
 | Durée totale | `/sante` après reconstruction | Intervention manuelle |
 |---|---|---|
-| `[MESURE]` | `[MESURE]` | Aucune |
+| 969 s (16 min 9 s) | `/resultat` : 200 ; `/sante` : pas de réponse dans le délai de 2 s au premier appel (code 000) | Aucune |
+
+**Commentaire** : `vagrant destroy -f` puis `vagrant up` ont reconstruit la plateforme complète sans aucune commande manuelle, en 969 s sur le poste décrit plus haut. Le premier appel de contrôle à `/sante` n'a reçu aucune réponse dans le délai de 2 s (code 000), alors que l'appel à `/resultat` qui suivait immédiatement a répondu 200 : la plateforme finissait de se mettre en place au moment du premier appel. La plateforme ainsi reconstruite a ensuite servi au test d'idempotence du 25/10 (section 9.8), qui a rejoué deux fois le provisionnement des 5 VM sans erreur. Cette reconstruction a été réalisée après la correction des ports SSH réservés par Windows (journal du 25/10).
 
 ### 9.7 V6 - Panne du répartiteur (E1)
 

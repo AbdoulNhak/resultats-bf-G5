@@ -38,6 +38,7 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 21/10 | Pannes simulées par `vagrant halt -f` dans V2, V4 et V6, relance automatique en fin de V2 et V6 | Panne brutale plus réaliste ; `vagrant halt` passe par SSH et avait échoué sur app1 |
 | 21/10 | Contrôle keepalived par `systemctl is-active --quiet haproxy` au lieu de `pidof haproxy` | Le contrôle `pidof` échouait sous keepalived (voir difficultés) |
 | 21/10 | Pour réduire `NB_APP` : détruire les VM en trop avant de baisser la valeur dans `.env` | Sinon Vagrant ne voit plus ces VM alors qu'elles tournent encore |
+| 25/10 | Le rôle A reprend les mesures restantes du rôle D : idempotence (ticket 16), V5, conditions de mesure ; la rotation du rôle D (ticket 21) reste à sa charge | Mesures indispensables au rendu du 25/10 ; une rotation ne peut pas être faite par un autre membre |
 | | `[À COMPLÉTER au fil du projet]` | |
 
 ## 3. Difficultés rencontrées et comment elles ont été levées
@@ -54,6 +55,7 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 22/10 | V3 : le débit baisse en passant de 2 à 4 serveurs (52,0-54,9 contre 41,9-45,7 req/s) | `vmstat` sur bdd1 : processeur à 100 %, dont 92-94 % en temps système, donc coût de l'ouverture d'une connexion par requête ; goulet identifié (dossier 9.4) | A |
 | 25/10 | `vagrant up` bloqué sur « Waiting for machine to boot » sur deux postes Windows ; VM démarrées, SSH actif dans les VM, mais rien n'écoute sur le port 2222 de l'hôte | Windows avait réservé la plage 2187-2286 (`netsh … excludedportrange`) ; VBox.log : « failed to set up redirection of 2222 to 22 ». Déblocage : `net stop winnat` / `vagrant up` / `net start winnat` ; correction durable : le Vagrantfile lit les plages réservées et attribue à chaque VM un port SSH libre à partir de 2722 | A |
 | 25/10 | `tests/idempotence.sh` s'arrêtait sans rapport : le comptage SQL échouait sur les VM sans PostgreSQL et `set -e` coupait le script | Commandes distantes rendues tolérantes (`; true`, `|| true`), échec réel de `vagrant provision` affiché, progression visible ; résultat : OK, 18 empreintes identiques | A (ticket 16 du rôle D) |
+| 25/10 | V5 : premier contrôle de `/sante` sans réponse en 2 s (code 000) juste après la reconstruction, `/resultat` à 200 l'instant d'après | Résultat publié tel quel et expliqué (dossier 9.6) ; reconstruction validée par le test d'idempotence qui a suivi | A |
 | | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan
