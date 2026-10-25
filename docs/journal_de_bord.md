@@ -39,7 +39,6 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 21/10 | Contrôle keepalived par `systemctl is-active --quiet haproxy` au lieu de `pidof haproxy` | Le contrôle `pidof` échouait sous keepalived (voir difficultés) |
 | 21/10 | Pour réduire `NB_APP` : détruire les VM en trop avant de baisser la valeur dans `.env` | Sinon Vagrant ne voit plus ces VM alors qu'elles tournent encore |
 | 25/10 | Le rôle A reprend les mesures restantes du rôle D : idempotence (ticket 16), V5, conditions de mesure ; la rotation du rôle D (ticket 21) reste à sa charge | Mesures indispensables au rendu du 25/10 ; une rotation ne peut pas être faite par un autre membre |
-| | `[À COMPLÉTER au fil du projet]` | |
 
 ## 3. Difficultés rencontrées et comment elles ont été levées
 
@@ -56,9 +55,11 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 25/10 | `vagrant up` bloqué sur « Waiting for machine to boot » sur deux postes Windows ; VM démarrées, SSH actif dans les VM, mais rien n'écoute sur le port 2222 de l'hôte | Windows avait réservé la plage 2187-2286 (`netsh … excludedportrange`) ; VBox.log : « failed to set up redirection of 2222 to 22 ». Déblocage : `net stop winnat` / `vagrant up` / `net start winnat` ; correction durable : le Vagrantfile lit les plages réservées et attribue à chaque VM un port SSH libre à partir de 2722 | A |
 | 25/10 | `tests/idempotence.sh` s'arrêtait sans rapport : le comptage SQL échouait sur les VM sans PostgreSQL et `set -e` coupait le script | Commandes distantes rendues tolérantes (`; true`, `|| true`), échec réel de `vagrant provision` affiché, progression visible ; résultat : OK, 18 empreintes identiques | A (ticket 16 du rôle D) |
 | 25/10 | V5 : premier contrôle de `/sante` sans réponse en 2 s (code 000) juste après la reconstruction, `/resultat` à 200 l'instant d'après | Résultat publié tel quel et expliqué (dossier 9.6) ; reconstruction validée par le test d'idempotence qui a suivi | A |
-| | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan
 
-`[À RÉDIGER en fin de projet - 5 à 6 lignes : ce qui a bien fonctionné dans
-l'organisation, ce que nous changerions, ce que chacun a appris]`
+Le projet a abouti à une infrastructure Vagrant reproductible avec un répartiteur, deux serveurs applicatifs et deux bases PostgreSQL.
+Les essais V1 à V6 ont documenté la répartition, les pannes applicative et de base, la reconstruction et la bascule du répartiteur.
+V5 a reconstruit le socle sans intervention manuelle ; le test R2 a confirmé 18 empreintes identiques après deux rejeux.
+L'incident de ports réservés par Windows a été diagnostiqué puis traité par l'attribution de ports SSH libres dans le Vagrantfile.
+L'observabilité E2 reste non finalisée et le pare-feu n'est pas activé par défaut ; ces limites sont consignées dans le dossier d'architecture.

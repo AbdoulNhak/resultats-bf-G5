@@ -9,11 +9,6 @@
 | … | C - Ingénieur données |
 | … | D - Essais et observabilité |
 
-> **Statut du document** : brouillon tenu par le rôle B. Les passages marqués
-> `[À COMPLÉTER - rôle X]` attendent l'information du membre concerné ; les
-> passages marqués `[MESURE]` ne doivent être remplis qu'avec des chiffres
-> produits par les scripts de `tests/` (sortie brute conservée dans `resultats/`).
-
 ---
 
 ## Sommaire
@@ -189,7 +184,18 @@ Ajouter un serveur est donc trivial et en retirer un est indolore.
 réponse 503 JSON lisible. Le service est géré par systemd (`Restart=always`)
 et écoute sur `0.0.0.0:5000` pour être joignable depuis lb1.
 
-`[À COMPLÉTER - rôle B : exemples de réponses réelles copiées depuis la plateforme]`
+**Réponses réelles** relevées le 25/10/2026 via le répartiteur (http://192.168.60.11) :
+
+| Requête | Code | Réponse |
+|---|---|---|
+| `GET /resultat?matricule=BF000123` | 200 | `{"admis":true,"matricule":"BF000123","moyenne":16.38,"nom":"Candidat 123","serie":"F","serveur":"app1"}` |
+| `GET /resultat?matricule=XX12` | 400 | `{"erreur":"matricule invalide (format attendu : BF000123)"}` |
+| `GET /resultat?matricule=BF999998` | 404 | `{"erreur":"matricule inconnu","matricule":"BF999998"}` |
+| `GET /sante` | 200 | `{"serveur":"app2","statut":"ok"}` |
+| `GET /info` | 200 | `{"serveur":"app1"}` |
+| `GET /sante` pendant la panne de bdd1 (V4) | 503 | `{"message":"Base de donn\u00e9es injoignable, r\u00e9essayez dans un instant.","serveur":"app2","statut":"indisponible"}` |
+
+Le champ `serveur` change d'une réponse à l'autre : les requêtes successives sont bien réparties entre app1 et app2.
 
 ---
 
@@ -279,8 +285,8 @@ aucun `BF999999` résiduel.
 | Cloisonnement réseau (R8) | Seul lb1 a une redirection de port, liée à `127.0.0.1` de l'hôte ; PostgreSQL n'écoute que sur `localhost` et l'IP privée ; `pg_hba.conf` n'accepte que `192.168.60.0/24` |
 | Moindre privilège | Compte PostgreSQL `app` en lecture seule ; service lancé par un compte système sans shell ; options systemd `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp` |
 | Entrées | Matricule validé par expression régulière (`^[A-Z]{2}[0-9]{6}$`) ; requêtes SQL paramétrées (pas d'injection) |
-| Pare-feu | `scripts/parefeu.sh` : ufw par rôle, n'ouvre que les ports nécessaires depuis le sous-réseau `[À COMPLÉTER - rôle B : activé ou non après tests]` |
-| Historique Git | Vérifié par `git log -p \| grep -iE "password\|passwd"` avant le rendu `[À COMPLÉTER]` |
+| Pare-feu | `scripts/parefeu.sh` : **non activé par défaut** (`PAREFEU=0`) : le script existe mais les scénarios V1, V2, V4 et V6 n'ont pas été rejoués avec le pare-feu actif. Le cloisonnement repose sur l'écoute des services sur les seules IP privées, `pg_hba.conf` limité au sous-réseau, et l'unique redirection de port de lb1 liée à 127.0.0.1. |
+| Historique Git | Vérifié le 25/10/2026 : `git log --all -- .env` ne renvoie aucun commit (`.env` n'a jamais été versionné) et `git log -p --all | grep -ciE "(PASSWORD|PASS)=[0-9a-f]{8,}"` renvoie 0. |
 
 ---
 
@@ -605,12 +611,12 @@ Activation : `AVEC_LB2=1 vagrant up`. Démonstration : scénario V6.
 La VM obs exécute Prometheus (collecte toutes les 5 s) et Grafana. Chaque VM
 expose ses métriques système (node_exporter, port 9100) ; HAProxy expose ses
 métriques de trafic par son exporteur intégré (port 8405). La source de
-données et les tableaux de bord sont provisionnés par fichiers : rien n'est
-configuré à la main dans l'interface.
+données est provisionnée par fichier : rien n'est configuré à la main dans
+l'interface.
 
 Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 
-`[À COMPLÉTER - rôle D : capture du tableau de bord pendant V3 (débit qui monte) et pendant V2 (serveur qui disparaît)]`
+**État : non finalisée.** `scripts/obs.sh` installe Prometheus et Grafana sur la VM obs, engendre les cibles depuis `config/noeuds.yml` (node_exporter sur chaque VM, exporteur intégré de HAProxy) et provisionne la source de données par fichier. Le tableau de bord (`config/grafana/dashboards/`) n'a pas été réalisé et l'extension n'a pas été démontrée pendant V2 et V3 : faute de temps, le groupe a privilégié les mesures obligatoires (V1 à V6, R2).
 
 ---
 
@@ -631,8 +637,8 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | Instant de la panne connu à quelques secondes près | `vagrant halt -f` met plusieurs secondes à démarrer sous Windows | Coupure horodatée au plus près (`VBoxManage controlvm <vm> poweroff`, ou `poweroff -f` dans la VM) |
 | Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
 | Débit très variable d'une série à l'autre | 3 séries V3 sur 7 en régime dégradé (12 à 13 req/s, réponses 503), cause non établie | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
-
-`[À COMPLÉTER - tous : limites découvertes pendant les tests]`
+| Ports réservés par Windows (Hyper-V, WSL) | La redirection SSH de Vagrant (2222) pouvait tomber dans une plage réservée : `vagrant up` restait bloqué | Corrigé : le Vagrantfile choisit un port SSH hors des plages réservées ; procédure `net stop winnat` documentée dans le README |
+| Pare-feu non activé par défaut | Pas de filtrage réseau dans les VM, au-delà des liaisons aux IP privées | Rejouer V1, V2, V4 et V6 avec `PAREFEU=1`, puis l'activer par défaut |
 
 ---
 
