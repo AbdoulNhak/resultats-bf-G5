@@ -1,0 +1,15 @@
+V4 - Panne de bdd1 - 2026-10-25 16:49:38 - cible http://192.168.60.11
+Vérification initiale : /sante répond HTTP 200 (application/json).
+==> bdd1: Forcing shutdown of VM...
+[16:49:46] bdd1 arrêtée
+Vérification de /sante pendant la panne :
+{"message":"Base de donn\u00e9es injoignable, r\u00e9essayez dans un instant.","serveur":"app2","statut":"indisponible"}
+HTTP 503 (application/json)
+[16:49:49] Bascule : promotion de bdd2
+t
+[16:50:09] Attente du retour de /sante à 200 via le répartiteur…
+[16:50:27] Service rétabli. Durée de la procédure : 38.4 s
+Temps total depuis l'arrêt de bdd1 : 48.9 s
+Vérification après bascule : /sante répond HTTP 200 (application/json).
+Vérification d'une lecture après bascule :
+{"admis":true,"matricule":"BF000123","moyenne":16.38,"nom":"Candidat 123","serie":"F","serveur":"app2"}
