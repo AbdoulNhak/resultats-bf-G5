@@ -19,15 +19,39 @@ source tests/config.sh
 debut=$(horodatage)
 echo "[$(date +%T)] Bascule : promotion de bdd2"
 
-etat=$(vagrant ssh bdd2 -c "sudo -u postgres psql -qtAc 'SELECT pg_is_in_recovery()'" 2>/dev/null | tr -d '[:space:]')
-if [ "$etat" = "t" ]; then
-  vagrant ssh bdd2 -c "sudo -u postgres psql -qtAc 'SELECT pg_promote(true, 30)'" 2>/dev/null
-else
-  echo "bdd2 est déjà primaire : rien à promouvoir."
-fi
+etat=$(vagrant ssh bdd2 -c "sudo -u postgres psql -v ON_ERROR_STOP=1 -qtAc 'SELECT pg_is_in_recovery()'" 2>/dev/null | tr -d '[:space:]') || {
+  echo "ERREUR : impossible de vérifier l'état de bdd2." >&2
+  exit 1
+}
+case "$etat" in
+  t)
+    vagrant ssh bdd2 -c "sudo -u postgres psql -v ON_ERROR_STOP=1 -qtAc 'SELECT pg_promote(true, 30)'" 2>/dev/null
+    ;;
+  f)
+    echo "bdd2 est déjà primaire : rien à promouvoir."
+    ;;
+  *)
+    echo "ERREUR : état inattendu de bdd2 : '$etat'." >&2
+    exit 1
+    ;;
+esac
 
 echo "[$(date +%T)] Attente du retour de /sante à 200 via le répartiteur…"
-until [ "$(code_http "$URL/sante")" = "200" ]; do sleep 0.5; done
+delai_max=${DELAI_MAX_BASCULE:-60}
+case "$delai_max" in
+  ''|*[!0-9]*|0)
+    echo "ERREUR : DELAI_MAX_BASCULE doit être un entier positif." >&2
+    exit 1
+    ;;
+esac
+debut_attente=$SECONDS
+while [ "$(code_http "$URL/sante")" != "200" ]; do
+  if (( SECONDS - debut_attente >= delai_max )); then
+    echo "ERREUR : /sante n'est pas revenu à 200 après ${delai_max}s." >&2
+    exit 1
+  fi
+  sleep 0.5
+done
 
 fin=$(horodatage)
 echo "[$(date +%T)] Service rétabli. Durée de la procédure : $(duree "$debut" "$fin") s"
