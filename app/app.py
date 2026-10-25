@@ -51,10 +51,14 @@ def requete(sql, params=()):
 
 
 def indisponible(exc):
-    app.logger.warning("base indisponible : %s", exc)
-    return jsonify(statut="indisponible", serveur=HOTE,
-                   message="Base de données injoignable, réessayez dans un instant."), 503
-
+    app.logger.warning(
+        "Base de données indisponible (%s)", type(exc).__name__
+    )
+    return jsonify(
+        statut="indisponible",
+        serveur=HOTE,
+        message="Base de données injoignable, réessayez dans un instant."
+    ), 503
 
 @app.get("/resultat")
 def resultat():
@@ -95,7 +99,12 @@ def info():
 def introuvable(_):
     return jsonify(erreur="ressource inconnue"), 404
 
-
+@app.errorhandler(405)
+def methode_non_autorisee(_):
+    return jsonify(
+        erreur="méthode HTTP non autorisée",
+        serveur=HOTE
+    ), 405
 @app.errorhandler(500)
 def erreur_interne(_):
     return jsonify(erreur="erreur interne", serveur=HOTE), 500
