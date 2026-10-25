@@ -44,6 +44,7 @@ case "$delai_max" in
     exit 1
     ;;
 esac
+DELAI_HTTP=${DELAI_HTTP:-6}   # après la bascule, chaque connexion attend d'abord l'échec vers bdd1 (2 s)
 debut_attente=$SECONDS
 while [ "$(code_http "$URL/sante")" != "200" ]; do
   if (( SECONDS - debut_attente >= delai_max )); then

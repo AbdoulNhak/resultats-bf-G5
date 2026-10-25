@@ -9,11 +9,6 @@
 | … | C - Ingénieur données |
 | … | D - Essais et observabilité |
 
-> **Statut du document** : brouillon tenu par le rôle B. Les passages marqués
-> `[À COMPLÉTER - rôle X]` attendent l'information du membre concerné ; les
-> passages marqués `[MESURE]` ne doivent être remplis qu'avec des chiffres
-> produits par les scripts de `tests/` (sortie brute conservée dans `resultats/`).
-
 ---
 
 ## Sommaire
@@ -189,7 +184,18 @@ Ajouter un serveur est donc trivial et en retirer un est indolore.
 réponse 503 JSON lisible. Le service est géré par systemd (`Restart=always`)
 et écoute sur `0.0.0.0:5000` pour être joignable depuis lb1.
 
-`[À COMPLÉTER - rôle B : exemples de réponses réelles copiées depuis la plateforme]`
+**Réponses réelles** relevées le 25/10/2026 via le répartiteur (http://192.168.60.11) :
+
+| Requête | Code | Réponse |
+|---|---|---|
+| `GET /resultat?matricule=BF000123` | 200 | `{"admis":true,"matricule":"BF000123","moyenne":16.38,"nom":"Candidat 123","serie":"F","serveur":"app1"}` |
+| `GET /resultat?matricule=XX12` | 400 | `{"erreur":"matricule invalide (format attendu : BF000123)"}` |
+| `GET /resultat?matricule=BF999998` | 404 | `{"erreur":"matricule inconnu","matricule":"BF999998"}` |
+| `GET /sante` | 200 | `{"serveur":"app2","statut":"ok"}` |
+| `GET /info` | 200 | `{"serveur":"app1"}` |
+| `GET /sante` pendant la panne de bdd1 (V4) | 503 | `{"message":"Base de donn\u00e9es injoignable, r\u00e9essayez dans un instant.","serveur":"app2","statut":"indisponible"}` |
+
+Le champ `serveur` change d'une réponse à l'autre : les requêtes successives sont bien réparties entre app1 et app2.
 
 ---
 
@@ -279,8 +285,8 @@ aucun `BF999999` résiduel.
 | Cloisonnement réseau (R8) | Seul lb1 a une redirection de port, liée à `127.0.0.1` de l'hôte ; PostgreSQL n'écoute que sur `localhost` et l'IP privée ; `pg_hba.conf` n'accepte que `192.168.60.0/24` |
 | Moindre privilège | Compte PostgreSQL `app` en lecture seule ; service lancé par un compte système sans shell ; options systemd `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp` |
 | Entrées | Matricule validé par expression régulière (`^[A-Z]{2}[0-9]{6}$`) ; requêtes SQL paramétrées (pas d'injection) |
-| Pare-feu | `scripts/parefeu.sh` : ufw par rôle, n'ouvre que les ports nécessaires depuis le sous-réseau `[À COMPLÉTER - rôle B : activé ou non après tests]` |
-| Historique Git | Vérifié par `git log -p \| grep -iE "password\|passwd"` avant le rendu `[À COMPLÉTER]` |
+| Pare-feu | `scripts/parefeu.sh` : **non activé par défaut** (`PAREFEU=0`) : le script existe mais les scénarios V1, V2, V4 et V6 n'ont pas été rejoués avec le pare-feu actif. Le cloisonnement repose sur l'écoute des services sur les seules IP privées, `pg_hba.conf` limité au sous-réseau, et l'unique redirection de port de lb1 liée à 127.0.0.1. |
+| Historique Git | Vérifié le 25/10/2026 : `git log --all -- .env` ne renvoie aucun commit (`.env` n'a jamais été versionné) et `git log -p --all | grep -ciE "(PASSWORD|PASS)=[0-9a-f]{8,}"` renvoie 0. |
 
 ---
 
@@ -448,7 +454,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 
 ## 9. Résultats des scénarios V1 à V6
 
-> Client de mesure : poste hôte (Lenovo ThinkPad P1 Gen 7, Windows), scripts de tests/ lancés depuis Git Bash. Les pannes sont simulées par `vagrant halt -f` (extinction forcée : panne brutale, indépendante de SSH). Chaque requête du client expire au bout de 2 s (`curl -m 2`, tests/config.sh) : les durées mesurées sont donc précises à 2 s près. Sous Git Bash, un tour de boucle de mesure prend environ 0,5 s (lancement des processus sous Windows) au lieu des 0,1 s (V2) et 0,2 s (V6) prévus. Les VM partagent le processeur d'une seule machine : les débits ne sont pas ceux d'un vrai déploiement. `[À COMPLÉTER - rôle D : processeur, RAM, versions de VirtualBox et Vagrant]`
+> Client de mesure : poste hôte (Lenovo ThinkPad P1 Gen 7, Windows), scripts de tests/ lancés depuis Git Bash. Les pannes sont simulées par `vagrant halt -f` (extinction forcée : panne brutale, indépendante de SSH). Chaque requête du client expire au bout de 2 s (`curl -m 2`, tests/config.sh) : les durées mesurées sont donc précises à 2 s près. Sous Git Bash, un tour de boucle de mesure prend environ 0,5 s (lancement des processus sous Windows) au lieu des 0,1 s (V2) et 0,2 s (V6) prévus. Les VM partagent le processeur d'une seule machine : les débits ne sont pas ceux d'un vrai déploiement. Poste hôte des mesures V1, V2, V3, V5, V6 et de l'idempotence : Lenovo ThinkPad P1 Gen 7, processeur Intel Core Ultra 9 185H (2,30 GHz), 32 Go de RAM, Windows ; VirtualBox 7.2.16, Vagrant 2.4.9 ; scripts lancés depuis Git Bash ; `ab` (V3) exécuté depuis la VM bdd2. V4 a été mesuré sur le poste du rôle C.
 
 ### 9.1 Synthèse
 
@@ -458,8 +464,9 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 | V2 Panne d'un serveur applicatif | Requêtes perdues ; durée de la période dégradée | 0 erreur au-delà de 5 s | 2 erreurs sur 76 (période dégradée 2,4 s) et 2 sur 41 (2,6 s) ; au plus 4,6 s | Conforme |
 | V3 Montée en charge | Requêtes/s avec N=2 puis N=4 | Hausse (ou explication) | Régime normal : N=2 52,0 à 54,9 req/s, N=4 41,9 à 45,7 req/s, sans erreur ; 3 séries sur 7 en régime dégradé (12 à 13 req/s, réponses 503) | Pas de hausse (baisse de 12 à 24 %), expliquée : base unique saturée (9.4) |
 | V4 Panne de la base primaire | 503 JSON pendant la panne, service rétabli et durée mesurée | 503 JSON, puis `/sante` et `/resultat` à 200 après bascule | 503 JSON ; service rétabli en 38,4 s (48,9 s depuis l'arrêt de bdd1) ; `/sante` et `/resultat` à 200 | Conforme |
-| V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
+| V5 Reconstruction | Durée totale | Sans intervention | 969 s (16 min 9 s), sans intervention | Conforme |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
+| R2 Idempotence | Fichiers modifiés par un second `vagrant provision` | Aucun | 0 sur 18 empreintes | Conforme |
 
 ### 9.2 V1 - Répartition
 
@@ -555,10 +562,13 @@ applications ; le flux WAL était `streaming` et les deux bases contenaient
 ### 9.6 V5 - Reconstruction
 
 - **Commande** : `bash tests/v5_reconstruction.sh`
+- **Sortie brute** : `resultats/v5_20261025_181605.txt`
 
 | Durée totale | `/sante` après reconstruction | Intervention manuelle |
 |---|---|---|
-| `[MESURE]` | `[MESURE]` | Aucune |
+| 969 s (16 min 9 s) | `/resultat` : 200 ; `/sante` : pas de réponse dans le délai de 2 s au premier appel (code 000) | Aucune |
+
+**Commentaire** : `vagrant destroy -f` puis `vagrant up` ont reconstruit la plateforme complète sans aucune commande manuelle, en 969 s sur le poste décrit plus haut. Le premier appel de contrôle à `/sante` n'a reçu aucune réponse dans le délai de 2 s (code 000), alors que l'appel à `/resultat` qui suivait immédiatement a répondu 200 : la plateforme finissait de se mettre en place au moment du premier appel. La plateforme ainsi reconstruite a ensuite servi au test d'idempotence du 25/10 (section 9.8), qui a rejoué deux fois le provisionnement des 5 VM sans erreur. Cette reconstruction a été réalisée après la correction des ports SSH réservés par Windows (journal du 25/10).
 
 ### 9.7 V6 - Panne du répartiteur (E1)
 
@@ -575,7 +585,8 @@ applications ; le flux WAL était `streaming` et les deux bases contenaient
 ### 9.8 Idempotence (R2)
 
 - **Commande** : `bash tests/idempotence.sh` (deux `vagrant provision` successifs, comparaison des empreintes MD5 des fichiers de configuration)
-- **Résultat** : `[MESURE]`
+- **Sortie brute** : `resultats/idempotence_20261025_194413.txt`
+- **Résultat** : OK. Deux `vagrant provision` successifs sur les 5 VM du socle (bdd1, bdd2, app1, app2, lb1) ; les 18 empreintes relevées sont identiques entre les deux rejeux. Le provisionnement ne modifie donc rien quand rien n'a changé (R2).
 
 ---
 
@@ -600,12 +611,12 @@ Activation : `AVEC_LB2=1 vagrant up`. Démonstration : scénario V6.
 La VM obs exécute Prometheus (collecte toutes les 5 s) et Grafana. Chaque VM
 expose ses métriques système (node_exporter, port 9100) ; HAProxy expose ses
 métriques de trafic par son exporteur intégré (port 8405). La source de
-données et les tableaux de bord sont provisionnés par fichiers : rien n'est
-configuré à la main dans l'interface.
+données est provisionnée par fichier : rien n'est configuré à la main dans
+l'interface.
 
 Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 
-`[À COMPLÉTER - rôle D : capture du tableau de bord pendant V3 (débit qui monte) et pendant V2 (serveur qui disparaît)]`
+**État : non finalisée.** `scripts/obs.sh` installe Prometheus et Grafana sur la VM obs, engendre les cibles depuis `config/noeuds.yml` (node_exporter sur chaque VM, exporteur intégré de HAProxy) et provisionne la source de données par fichier. Le tableau de bord (`config/grafana/dashboards/`) n'a pas été réalisé et l'extension n'a pas été démontrée pendant V2 et V3 : faute de temps, le groupe a privilégié les mesures obligatoires (V1 à V6, R2).
 
 ---
 
@@ -626,8 +637,8 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | Instant de la panne connu à quelques secondes près | `vagrant halt -f` met plusieurs secondes à démarrer sous Windows | Coupure horodatée au plus près (`VBoxManage controlvm <vm> poweroff`, ou `poweroff -f` dans la VM) |
 | Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
 | Débit très variable d'une série à l'autre | 3 séries V3 sur 7 en régime dégradé (12 à 13 req/s, réponses 503), cause non établie | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
-
-`[À COMPLÉTER - tous : limites découvertes pendant les tests]`
+| Ports réservés par Windows (Hyper-V, WSL) | La redirection SSH de Vagrant (2222) pouvait tomber dans une plage réservée : `vagrant up` restait bloqué | Corrigé : le Vagrantfile choisit un port SSH hors des plages réservées ; procédure `net stop winnat` documentée dans le README |
+| Pare-feu non activé par défaut | Pas de filtrage réseau dans les VM, au-delà des liaisons aux IP privées | Rejouer V1, V2, V4 et V6 avec `PAREFEU=1`, puis l'activer par défaut |
 
 ---
 
