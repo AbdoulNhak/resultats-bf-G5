@@ -217,12 +217,35 @@ bdd1, puis reçoit le journal WAL en continu. Elle est en lecture seule
 (`pg_is_in_recovery() = true`). Un marqueur empêche un nouveau provisionnement
 d'effacer une base déjà promue.
 
-**Vérification de R5** `[À COMPLÉTER - rôle C : commandes exactes et sortie]` :
+**Vérification de R5** (effectuée le 25/10/2026). Depuis Git Bash, à la racine
+du dépôt :
 
 ```bash
-vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c \"INSERT INTO resultats VALUES ('BF999999','Test réplication','C',12.5,true)\""
-vagrant ssh bdd2 -c "sudo -u postgres psql -d resultats -c \"SELECT * FROM resultats WHERE matricule='BF999999'\""
+printf '%s\n' "SELECT pg_is_in_recovery();" |
+  vagrant ssh bdd2 -c "sudo -u postgres psql -X -P pager=off -tA"
+# Résultat attendu et observé : t
+
+printf '%s\n' "SELECT application_name, client_addr, state, sync_state FROM pg_stat_replication;" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -F '|' -tA"
+# Résultat observé : 16/main|192.168.60.32|streaming|async
+
+printf '%s\n' "INSERT INTO resultats (matricule, nom, serie, moyenne, admis) VALUES ('BF999999', 'Test replication', 'C', 12.50, true);" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -v ON_ERROR_STOP=1 -d resultats"
+# Résultat observé : INSERT 0 1
+
+printf '%s\n' "SELECT matricule || '|' || nom || '|' || serie || '|' || moyenne::text || '|' || admis::text FROM resultats WHERE matricule = 'BF999999';" |
+  vagrant ssh bdd2 -c "sudo -u postgres psql -X -P pager=off -tA -v ON_ERROR_STOP=1 -d resultats"
+# Résultat observé : BF999999|Test replication|C|12.50|true
+
+# Nettoyage du résultat de test ; la suppression est elle aussi répliquée.
+printf '%s\n' "DELETE FROM resultats WHERE matricule = 'BF999999';" |
+  vagrant ssh bdd1 -c "sudo -u postgres psql -X -P pager=off -v ON_ERROR_STOP=1 -d resultats"
+# Après propagation, le nombre de résultats est revenu à 50000 sur les deux bases.
 ```
+
+Après ce contrôle, `pg_stat_replication` sur bdd1 indiquait bien bdd2 en état
+`streaming`. Le contrôle final a confirmé 50 000 lignes sur bdd1 et bdd2 et
+aucun `BF999999` résiduel.
 
 ---
 
