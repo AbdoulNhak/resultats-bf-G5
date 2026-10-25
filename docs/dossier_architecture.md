@@ -210,6 +210,26 @@ Les 50 000 lignes sont engendrées par `generate_series`, avec une graine fixe
 (`setseed(0.42)`) : le jeu de données est identique sur tous les postes, ce qui
 rend les mesures comparables. Le compte `app` n'a que le droit `SELECT`.
 
+**Vérification du ticket 6** (effectuée le 25/10/2026) :
+
+```bash
+vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c 'SELECT count(*) FROM resultats'"
+vagrant ssh bdd2 -c "sudo -u postgres psql -d resultats -c 'SELECT count(*) FROM resultats'"
+vagrant ssh bdd1 -c "sudo -u postgres psql -d resultats -c \"SET ROLE app; SELECT count(*) FROM resultats;\""
+```
+
+Les deux bases contiennent 50 000 lignes et `app` peut les lire. Une tentative
+d'insertion après `SET ROLE app` a échoué avec `permission denied for table
+resultats`; les contrôles PostgreSQL confirment `SELECT = true` et
+`INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER = false` sur cette table.
+Le rôle n'est ni superutilisateur, ni autorisé à créer des bases ou des rôles.
+Le privilège `TEMP` de la base est hérité de `PUBLIC` ; il permet uniquement
+des tables temporaires et ne donne pas de droit d'écriture sur `resultats`.
+
+Le répertoire PostgreSQL est `/var/lib/postgresql/16/main`, distinct du dossier
+partagé `/vagrant` : les fichiers de données ne sont pas placés dans le partage
+Vagrant.
+
 ### 6.2 Réplication
 
 bdd2 est initialisée une seule fois par `pg_basebackup -R -X stream` depuis
