@@ -460,6 +460,7 @@ faire céder l'IP virtuelle. Mesure : voir 9.7 (interruption de 2,5 s, au plus
 | V4 Panne de la base primaire | 503 JSON pendant la panne, service rétabli et durée mesurée | 503 JSON, puis `/sante` et `/resultat` à 200 après bascule | 503 JSON ; service rétabli en 38,4 s (48,9 s depuis l'arrêt de bdd1) ; `/sante` et `/resultat` à 200 | Conforme |
 | V5 Reconstruction | Durée totale | Sans intervention | `[MESURE]` | |
 | V6 Panne du répartiteur (E1) | Temps de reprise | < 5 s | 2 erreurs sur 69 ; interruption 2,5 s (au plus 4,5 s) | Conforme |
+| R2 Idempotence | Fichiers modifiés par un second `vagrant provision` | Aucun | 0 sur 18 empreintes | Conforme |
 
 ### 9.2 V1 - Répartition
 
@@ -575,7 +576,8 @@ applications ; le flux WAL était `streaming` et les deux bases contenaient
 ### 9.8 Idempotence (R2)
 
 - **Commande** : `bash tests/idempotence.sh` (deux `vagrant provision` successifs, comparaison des empreintes MD5 des fichiers de configuration)
-- **Résultat** : `[MESURE]`
+- **Sortie brute** : `resultats/idempotence_20261025_194413.txt`
+- **Résultat** : OK. Deux `vagrant provision` successifs sur les 5 VM du socle (bdd1, bdd2, app1, app2, lb1) ; les 18 empreintes relevées sont identiques entre les deux rejeux. Le provisionnement ne modifie donc rien quand rien n'a changé (R2).
 
 ---
 

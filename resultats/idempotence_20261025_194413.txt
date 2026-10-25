@@ -1,0 +1,2 @@
+R2 - Idempotence - 2026-10-25 19:44:13 - VM : bdd1 bdd2 app1 app2 lb1
+OK : aucun fichier modifié par le second rejeu (18 empreintes comparées).
