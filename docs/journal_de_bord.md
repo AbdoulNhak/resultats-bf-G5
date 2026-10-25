@@ -52,6 +52,7 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 21/10 | V3 : la ligne SYNTHESE comptait deux fois les réponses 503 (« Failed » et « Non-2xx » d'`ab`) | Calcul corrigé dans `tests/v3_charge.sh` ; fichiers bruts conservés tels quels, écart expliqué dans le dossier (9.4) | A |
 | 21-22/10 | V3 : 3 séries sur 7 en régime dégradé (12 à 13 req/s, 8,6 % à 43 % de réponses 503), les 4 autres sans erreur | Cause non établie ; séries publiées, comparaison faite sur le régime normal | A, D |
 | 22/10 | V3 : le débit baisse en passant de 2 à 4 serveurs (52,0-54,9 contre 41,9-45,7 req/s) | `vmstat` sur bdd1 : processeur à 100 %, dont 92-94 % en temps système, donc coût de l'ouverture d'une connexion par requête ; goulet identifié (dossier 9.4) | A |
+| 25/10 | `vagrant up` bloqué sur « Waiting for machine to boot » sur deux postes Windows ; VM démarrées, SSH actif dans les VM, mais rien n'écoute sur le port 2222 de l'hôte | Windows avait réservé la plage 2187-2286 (`netsh … excludedportrange`) ; VBox.log : « failed to set up redirection of 2222 to 22 ». Déblocage : `net stop winnat` / `vagrant up` / `net start winnat` ; correction durable : le Vagrantfile lit les plages réservées et attribue à chaque VM un port SSH libre à partir de 2722 | A |
 | | `[À COMPLÉTER - ex. : version de boîte introuvable, réseau hôte-seul refusé, service qui n'écoute que sur 127.0.0.1, fins de ligne CRLF…]` | | |
 
 ## 4. Bilan

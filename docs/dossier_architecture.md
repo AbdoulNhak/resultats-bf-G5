@@ -154,6 +154,7 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 | **`NB_APP` fixé dans `.env`** plutôt que sur la ligne de commande | `NB_APP=4 vagrant up` seul | Chaque commande Vagrant réécrit `config/noeuds.yml` : une valeur donnée une seule fois en ligne de commande serait perdue au `vagrant up lb1` suivant. Le Vagrantfile affiche un avertissement si des VM `appN` existent au-delà de `NB_APP`. |
 | **Paramètre `PAREFEU` lu comme les autres** (ligne de commande ou `.env`) | Lecture dans `.env` seulement | Cohérence avec `NB_APP`, `AVEC_LB2` et `AVEC_OBS`. |
 | **Résolution DNS par l'hôte** (`--natdnshostresolver1 on`) et nouvel essai d'apt | DNS NAT par défaut de VirtualBox | Un changement de réseau du poste rendait le DNS des VM invalide et faisait échouer `vagrant up` (R1). |
+| **Port SSH de chaque VM choisi hors des plages réservées par Windows** | Port 2222 par défaut de Vagrant | Hyper-V/WSL réservent au démarrage des plages de ports aléatoires ; la redirection SSH échouait et `vagrant up` restait bloqué (R1). |
 
 ---
 

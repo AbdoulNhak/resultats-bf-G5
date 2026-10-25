@@ -112,6 +112,33 @@ def ip_de(nom)
   NOEUDS.find { |n| n["nom"] == nom }&.fetch("ip")
 end
 
+# ---------------------------------------------------------------------------
+# Ports SSH sûrs sous Windows (R1) : Hyper-V, WSL et Docker réservent au
+# démarrage des plages de ports aléatoires (netsh ... excludedportrange). Si la
+# redirection SSH de Vagrant (2222, 2200...) tombe dedans, VirtualBox ne peut pas
+# l'ouvrir et `vagrant up` attend jusqu'au délai maximal. On lit ces plages et
+# on donne à chaque VM un port SSH libre, à partir de 2722.
+# ---------------------------------------------------------------------------
+def ports_exclus_windows
+  return [] unless Gem.win_platform?
+  sortie = `netsh interface ipv4 show excludedportrange protocol=tcp 2>NUL`
+  sortie.to_s.b.scan(/^\s*(\d+)\s+(\d+)/n).map { |a, b| (a.to_i..b.to_i) }
+rescue StandardError
+  []
+end
+PORTS_EXCLUS = ports_exclus_windows
+PORTS_PRIS = []
+def port_ssh_libre(depart)
+  port = depart
+  port += 1 while PORTS_EXCLUS.any? { |r| r.cover?(port) } || PORTS_PRIS.include?(port)
+  PORTS_PRIS << port
+  port
+end
+if PORTS_EXCLUS.any? { |r| r.cover?(8080) } && !$avertissement_8080
+  $avertissement_8080 = true
+  warn "ATTENTION : Windows a réservé le port 8080 ; utilisez http://192.168.60.11 au lieu de localhost:8080, ou lancez en administrateur : net stop winnat, vagrant up, net start winnat."
+end
+
 # Variables passées à tous les scripts de provisionnement
 ENV_COMMUN = SECRETS.merge(
   "GROUPE"   => GROUPE.to_s,
@@ -139,6 +166,9 @@ Vagrant.configure("2") do |config|
     config.vm.define n["nom"] do |m|
       m.vm.hostname = n["nom"]
       m.vm.network "private_network", ip: n["ip"]
+      # Redirection SSH sur un port que Windows n'a pas réservé (voir plus haut)
+      m.vm.network "forwarded_port", id: "ssh", guest: 22, host: port_ssh_libre(2722),
+                   host_ip: "127.0.0.1", auto_correct: true
 
       # R8 : seul le répartiteur actif expose un port vers l'hôte.
       if n["nom"] == "lb1"

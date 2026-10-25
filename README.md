@@ -121,6 +121,12 @@ resultats/               sorties brutes des scénarios
 - **HAProxy ne voit pas les nouveaux serveurs** : `vagrant provision lb1`.
 - **Après une bascule** : ne pas redémarrer `bdd1` tel quel (il repartirait en
   primaire). Voir la procédure de remise en service dans le dossier.
+- **`vagrant up` bloque sur « Waiting for machine to boot » sous Windows** :
+  Windows a peut-être réservé le port de redirection SSH (vérifier avec
+  `netsh interface ipv4 show excludedportrange protocol=tcp`). Le Vagrantfile
+  choisit normalement un port libre ; si le problème persiste, dans PowerShell
+  en administrateur : `vagrant halt -f`, `net stop winnat`, `vagrant up`,
+  `net start winnat`.
 
 ## 8. Contribuer
 
