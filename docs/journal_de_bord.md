@@ -9,10 +9,10 @@ entrées au fil de l'eau, par pull request.
 
 | Membre | Rôle | Périmètre | Extension | Commit hors domaine (rotation) |
 |---|---|---|---|---|
-| … | A - Architecte réseau, répartition et intégration | Vagrantfile, HAProxy, sonde de santé, Git, reconstruction (R1, R3, R4, R8) | E1 | Script de charge `tests/v3_charge.sh` |
-| … | B - Ingénieur applicatif, sécurité et documentation | Application, secrets, pare-feu, README, dossier, journal (R7, R8) | - | Relecture de `scripts/bascule.sh` |
-| … | C - Ingénieur données | PostgreSQL, jeu de données, réplication, bascule (R5, R6) | E3 (réserve) | Requête SQL de `/resultat` |
-| … | D - Essais et observabilité | Scénarios V1 à V6, mesures, idempotence (R2) | E2 | Provisionnement de lb2 (`keepalived.sh`) |
+| NACANABO Cheick A-Hak | A - Architecte réseau, répartition et intégration | Vagrantfile, HAProxy, sonde de santé, Git, reconstruction (R1, R3, R4, R8) | E1 | Script de charge `tests/v3_charge.sh` |
+| SIMPORE Carine (Leslie) | B - Ingénieur applicatif, sécurité et documentation | Application, secrets, pare-feu, README, dossier, journal (R7, R8) | - | Relecture de `scripts/bascule.sh` |
+| TAO Abdoul Aziz | C - Ingénieur données | PostgreSQL, jeu de données, réplication, bascule (R5, R6) | E3 (réserve) | Requête SQL de `/resultat` |
+| SAOURA Pingwendé Audrey | D - Essais et observabilité | Scénarios V1 à V6, mesures, idempotence (R2) | E2 | Provisionnement de lb2 (`keepalived.sh`) |
 
 **Organisation.** Un ticket GitHub (issue) par tâche, rattaché à un jalon
 (J1 : 7 oct., J2 : 13 oct., J3 : 19 oct., rendu : 25 oct.). Chaque membre crée
@@ -65,3 +65,10 @@ Les essais V1 à V6 ont documenté la répartition, les pannes applicative et de
 V5 a reconstruit le socle sans intervention manuelle ; le test R2 a confirmé 18 empreintes identiques après deux rejeux.
 L'incident de ports réservés par Windows a été diagnostiqué puis traité par l'attribution de ports SSH libres dans le Vagrantfile.
 L'observabilité E2 reste non finalisée et le pare-feu n'est pas activé par défaut ; ces limites sont consignées dans le dossier d'architecture.
+
+**Ce que chacun a appris**
+
+- **A** : J'ai appris à diagnostiquer à partir des journaux plutôt qu'en relançant. Un port réservé par Windows (VBox.log), un contrôle keepalived qui échouait (`pidof` lié à `killall5`) ou un déséquilibre de V1 (journal HAProxy) n'étaient visibles qu'ainsi. J'ai aussi appris qu'une mesure ne vaut que reproduite et expliquée : en V3, ajouter des serveurs faisait baisser le débit, et c'est la mesure de bdd1 avec `vmstat` qui a montré que la base était le goulet d'étranglement.
+- **B** : J'ai appris qu'un service sans état tient en peu de code, mais impose des choix précis : une connexion par requête, des erreurs toujours rendues en JSON, et des secrets lus dans un fichier protégé et jamais versionnés. J'ai aussi appris à configurer un dépôt GitHub avec mes camarades pour le travail en équipe (protection de `main`, fusion par merge commit) et à tenir un journal qui garde la trace des décisions.
+- **C** : J'ai appris à mettre en place et à vérifier une réplication en flux PostgreSQL (`pg_basebackup`, `pg_stat_replication`), et à écrire une bascule chronométrée. La partie la plus délicate a été la remise en service de bdd1 après une bascule : redémarrer l'ancienne base telle quelle aurait créé deux bases principales, d'où une procédure qui reconstruit bdd1 comme réplique de bdd2.
+- **D** : J'ai appris à représenter une architecture de façon lisible, avec les VM, leurs adresses et leurs flux, et à concevoir des scénarios de test qui enregistrent leurs sorties brutes, pour que chaque chiffre soit vérifiable.
