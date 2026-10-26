@@ -285,7 +285,7 @@ aucun `BF999999` résiduel.
 | Cloisonnement réseau (R8) | Seul lb1 a une redirection de port, liée à `127.0.0.1` de l'hôte ; PostgreSQL n'écoute que sur `localhost` et l'IP privée ; `pg_hba.conf` n'accepte que `192.168.60.0/24` |
 | Moindre privilège | Compte PostgreSQL `app` en lecture seule ; service lancé par un compte système sans shell ; options systemd `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp` |
 | Entrées | Matricule validé par expression régulière (`^[A-Z]{2}[0-9]{6}$`) ; requêtes SQL paramétrées (pas d'injection) |
-| Pare-feu | `scripts/parefeu.sh` : **non activé par défaut** (`PAREFEU=0`) : le script existe mais les scénarios V1, V2, V4 et V6 n'ont pas été rejoués avec le pare-feu actif. Le cloisonnement repose sur l'écoute des services sur les seules IP privées, `pg_hba.conf` limité au sous-réseau, et l'unique redirection de port de lb1 liée à 127.0.0.1. |
+| Pare-feu | `scripts/parefeu.sh` : ufw par rôle, n'ouvre que les ports nécessaires (22 depuis partout pour Vagrant, 80 sur les répartiteurs, 5000 sur les serveurs applicatifs, 5432 sur les bases, 8404, 8405 et VRRP sur les répartiteurs, depuis le sous-réseau). **Testé et validé le 26/10/2026** : avec `PAREFEU=1`, V1, V2, V4 et V6 sont conformes (section 9.9). **Désactivé par défaut** (`PAREFEU=0`) : l'activer par défaut demanderait de rejouer aussi V5 sur un poste vierge. |
 | Historique Git | Vérifié le 25/10/2026 : `git log --all -- .env` ne renvoie aucun commit (`.env` n'a jamais été versionné) et `git log -p --all | grep -ciE "(PASSWORD|PASS)=[0-9a-f]{8,}"` renvoie 0. |
 
 ---
@@ -588,6 +588,19 @@ applications ; le flux WAL était `streaming` et les deux bases contenaient
 - **Sortie brute** : `resultats/idempotence_20261025_194413.txt`
 - **Résultat** : OK. Deux `vagrant provision` successifs sur les 5 VM du socle (bdd1, bdd2, app1, app2, lb1) ; les 18 empreintes relevées sont identiques entre les deux rejeux. Le provisionnement ne modifie donc rien quand rien n'a changé (R2).
 
+### 9.9 Scénarios rejoués avec le pare-feu actif (26/10)
+
+`PAREFEU=1` et `AVEC_LB2=1` dans `.env`, puis `vagrant up` ; `sudo ufw status` affiche `Status: active` et uniquement les règles de leur rôle sur les 6 VM (bdd1, bdd2, app1, app2, lb1, lb2).
+
+| Scénario | Sortie brute | Résultat | Verdict |
+|---|---|---|---|
+| V1 Répartition (N=2) | `v1_20261026_094039.txt`, `v1_20261026_101945.txt`, `v1_20261026_101953.txt` | 12/8 (écart 40 %) au premier passage, puis 10/10 (écart 0 %) deux fois | Conforme (voir commentaire) |
+| V2 Panne d'app1 | `v2_20261026_094144.txt` | 2 erreurs sur 60 ; période dégradée 2,5 s (au plus 4,5 s) | Conforme |
+| V6 Panne de lb1 | `v6_20261026_094815.txt` | 1 erreur sur 59 : une seule requête perdue, interruption inférieure à la résolution de la mesure (au plus environ 2,5 s) | Conforme |
+| V4 Panne de bdd1 | `v4_20261026_095044.txt` | 503 JSON pendant la panne ; bascule en 25,4 s, 39,0 s depuis l'arrêt de bdd1 ; lecture à 200 après bascule | Conforme |
+
+**Commentaire** : le premier passage de V1 a donné 12 réponses d'app1 pour 8 d'app2 (écart de 40 %). Le journal de HAProxy (`/var/log/haproxy.log` sur lb1) montre que les 20 requêtes ont toutes abouti (HTTP 200), sans aucune relance ni redistribution (compteur de relances à 0) : les 4 premières ont été envoyées à app1 d'affilée, puis la répartition a alterné strictement. Le déséquilibre vient donc de l'état interne de l'algorithme de tour de rôle de HAProxy au début de la série, lancée juste après le `vagrant up` qui activait le pare-feu, et non d'un échec de connexion : il n'est pas attribuable au pare-feu. Deux répétitions immédiates ont donné 10/10 (écart 0 %). Avec le pare-feu actif, V2, V4 et V6 sont conformes, avec des durées du même ordre que sans pare-feu (sections 9.3, 9.5 et 9.7).
+
 ---
 
 ## 10. Extensions réalisées
@@ -638,7 +651,7 @@ Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 | Retour de lb1 non mesuré | La brève coupure possible quand lb1 reprend l'IP virtuelle (préemption VRRP) n'est pas quantifiée | Prolonger la mesure pendant le retour de lb1, ou option `nopreempt` pour éviter une seconde bascule |
 | Débit très variable d'une série à l'autre | 3 séries V3 sur 7 en régime dégradé (12 à 13 req/s, réponses 503), cause non établie | Plusieurs séries par configuration, poste dédié aux mesures, client de charge sur une machine séparée |
 | Ports réservés par Windows (Hyper-V, WSL) | La redirection SSH de Vagrant (2222) pouvait tomber dans une plage réservée : `vagrant up` restait bloqué | Corrigé : le Vagrantfile choisit un port SSH hors des plages réservées ; procédure `net stop winnat` documentée dans le README |
-| Pare-feu non activé par défaut | Pas de filtrage réseau dans les VM, au-delà des liaisons aux IP privées | Rejouer V1, V2, V4 et V6 avec `PAREFEU=1`, puis l'activer par défaut |
+| Pare-feu non activé par défaut | Validé le 26/10 avec V1, V2, V4 et V6, mais pas activé par défaut : sans `PAREFEU=1`, aucun filtrage réseau dans les VM au-delà des liaisons aux IP privées | Rejouer V5 avec `PAREFEU=1`, puis l'activer par défaut |
 
 ---
 
