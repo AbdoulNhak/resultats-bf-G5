@@ -1,4 +1,4 @@
-# RÉSULTATS-BF - Groupe 5
+<img width="331" height="30" alt="image" src="https://github.com/user-attachments/assets/97db23fa-f6fa-4503-bb89-a30d62953c4b" /># RÉSULTATS-BF - Groupe 5
 
 Plateforme de consultation des résultats d'examen, résiliente et scalable,
 entièrement décrite en code avec Vagrant et VirtualBox.
@@ -172,7 +172,7 @@ jamais de données PostgreSQL dans `/vagrant`.
 
 | Rôle | Membre |
 |---|---|
-| A - Architecte réseau, répartition et intégration | … |
-| B - Ingénieur applicatif, sécurité et documentation | … |
-| C - Ingénieur données | … |
-| D - Essais et observabilité | … |
+| A - Architecte réseau, répartition et intégration | NACANABO Cheick A-Hak |
+| B - Ingénieur applicatif, sécurité et documentation | SIMPORE Carine (Leslie)|
+| C - Ingénieur données | TAO Abdoul Aziz |
+| D - Essais et observabilité | SAOURA Pingwendé Audrey |
