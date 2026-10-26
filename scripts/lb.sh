@@ -13,7 +13,9 @@ installer_fichier "$tmp" /etc/haproxy/errors/503-resultats.http || true
 
 # Exporter Prometheus intégré, seulement si HAProxy a été compilé avec
 OPTION=""
-if [ "${AVEC_OBS:-0}" = "1" ] && haproxy -vv 2>/dev/null | grep -q PROMEX; then
+# Pas de « | grep -q » : avec pipefail, grep -q coupe le tuyau et haproxy -vv
+# se termine en erreur (SIGPIPE), ce qui ferait échouer le test à tort.
+if [ "${AVEC_OBS:-0}" = "1" ] && [[ "$(haproxy -vv 2>/dev/null)" == *PROMEX* ]]; then
   OPTION="--promex"
 fi
 
