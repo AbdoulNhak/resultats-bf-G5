@@ -1,4 +1,4 @@
-# RÉSULTATS-BF - Groupe 5
+<img width="331" height="30" alt="image" src="https://github.com/user-attachments/assets/97db23fa-f6fa-4503-bb89-a30d62953c4b" /># RÉSULTATS-BF - Groupe 5
 
 Plateforme de consultation des résultats d'examen, résiliente et scalable,
 entièrement décrite en code avec Vagrant et VirtualBox.
