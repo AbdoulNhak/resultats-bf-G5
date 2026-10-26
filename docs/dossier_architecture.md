@@ -150,6 +150,7 @@ démarrage : elle ouvre une connexion par requête et réessaie d'elle-même.
 | **Paramètre `PAREFEU` lu comme les autres** (ligne de commande ou `.env`) | Lecture dans `.env` seulement | Cohérence avec `NB_APP`, `AVEC_LB2` et `AVEC_OBS`. |
 | **Résolution DNS par l'hôte** (`--natdnshostresolver1 on`) et nouvel essai d'apt | DNS NAT par défaut de VirtualBox | Un changement de réseau du poste rendait le DNS des VM invalide et faisait échouer `vagrant up` (R1). |
 | **Port SSH de chaque VM choisi hors des plages réservées par Windows** | Port 2222 par défaut de Vagrant | Hyper-V/WSL réservent au démarrage des plages de ports aléatoires ; la redirection SSH échouait et `vagrant up` restait bloqué (R1). |
+| **Tableau de bord Grafana copié hors de `/vagrant`** | Lecture directe dans le dossier partagé | Grafana ne chargeait pas le fichier lu dans le dossier partagé VirtualBox ; la copie (remplacée seulement si elle change) est fiable et idempotente (R2). |
 
 ---
 
@@ -542,7 +543,7 @@ Note : la ligne SYNTHESE de `v3_n4_20261021_200906.txt` indique 4 950 échecs, c
 
 **Charge de bdd1** pendant la série du 22/10 à 13 h 40 (`vagrant ssh bdd1 -c "vmstat 1 15"`) : pendant 12 secondes consécutives, processeur inactif à 0 %, temps système de 92 à 94 %, temps utilisateur de 6 à 8 %, de 4 à 18 processus en attente pour un seul processeur, de 2 165 à 2 687 interruptions par seconde. (La première ligne de vmstat, moyenne depuis le démarrage, et les deux dernières, prises entre deux essais, ne sont pas retenues.)
 
-**Commentaire** : les sept séries se répartissent en deux régimes. Quatre séries (21/10 à 20 h 29, 22/10 à 8 h 53, 12 h 15 et 13 h 40) se déroulent sans aucune erreur. Trois séries, toutes le 21/10 au soir, tombent à 12 à 13 req/s avec 8,6 % à 43 % de réponses 503. La cause de ce régime dégradé n'est pas établie : l'hypothèse d'un poste encore occupé après une opération Vagrant lourde a été réfutée, la série du 22/10 à 12 h 15, lancée juste après `vagrant provision lb1`, étant sans erreur. Ces trois séries sont publiées mais ne servent pas à la comparaison.
+**Commentaire** : les sept séries se répartissent en deux régimes. Quatre séries (21/10 à 20 h 29, 22/10 à 8 h 53, 12 h 15 et 13 h 40) se déroulent sans aucune erreur. Trois séries, toutes le 21/10 au soir, tombent à 12 à 13 req/s avec 8,6 % à 43 % de réponses 503. La cause de ce régime dégradé n'est pas établie : l'hypothèse d'un poste encore occupé après une opération Vagrant lourde a été réfutée, la série du 22/10 à 12 h 15, lancée juste après `vagrant provision lb1`, étant sans erreur. Ces trois séries sont publiées mais ne servent pas à la comparaison. La saturation de bdd1 est aussi visible en direct sur le tableau de bord de supervision (section 10, E2).
 
 En régime normal, passer de 2 à 4 serveurs applicatifs fait **baisser** le débit : 54,9 et 52,0 req/s avec N=2 contre 45,7 et 41,9 req/s avec N=4, soit une baisse de 12 à 24 %. Le temps moyen par requête passe d'environ 0,9 s à 1,1 à 1,3 s. La mesure de bdd1 explique ce résultat : pendant la charge, son unique processeur est occupé à 100 %, dont 92 à 94 % en temps système et seulement 6 à 8 % en temps utilisateur. Le coût dominant n'est donc pas l'exécution de la requête SQL, mais l'ouverture d'une connexion PostgreSQL (un nouveau processus) pour chaque requête, et le traitement réseau associé. bdd1 est le goulet d'étranglement. Ajouter des serveurs applicatifs augmente seulement le nombre de connexions simultanées qu'elle doit ouvrir (jusqu'à 32 avec N=4 contre 16 avec N=2 : serveurs × 2 processus gunicorn × 4 fils), et donc la concurrence sur son processeur ; les deux VM supplémentaires consomment en outre du processeur sur le poste.
 
@@ -638,7 +639,22 @@ l'interface.
 
 Activation : `AVEC_OBS=1 vagrant up`. Interface : `http://192.168.60.41:3000`.
 
-**État : non finalisée.** `scripts/obs.sh` installe Prometheus et Grafana sur la VM obs, engendre les cibles depuis `config/noeuds.yml` (node_exporter sur chaque VM, exporteur intégré de HAProxy) et provisionne la source de données par fichier. Le tableau de bord (`config/grafana/dashboards/`) n'a pas été réalisé et l'extension n'a pas été démontrée pendant V2 et V3 : faute de temps, le groupe a privilégié les mesures obligatoires (V1 à V6, R2).
+**État : réalisée et démontrée le 26/10/2026.** Le tableau de bord « RÉSULTATS-BF — supervision » (`config/grafana/dashboards/resultats-bf.json`) est provisionné par fichier : aucun réglage n'est fait à la main dans l'interface. Il comporte 7 panneaux : serveurs applicatifs en service, requêtes par seconde reçues par le répartiteur, requêtes par serveur applicatif, état des serveurs selon la sonde HAProxy, processeur et mémoire par VM, VM joignables par Prometheus. Chaque cible Prometheus porte le nom de sa VM (étiquette `vm`), engendré depuis `config/noeuds.yml`.
+
+**Démonstration.** Pendant V3, le débit monte jusqu'à environ 50 req/s et le processeur de bdd1 atteint 100 % : le tableau de bord montre en direct la saturation de la base mesurée en 9.4. Pendant V2, le nombre de serveurs en service passe de 2 à 1 et app1 apparaît hors service sur les deux frises, puis revient après sa relance. Sur les frises, vert signifie en service (1) et rouge hors service (0).
+
+**Reproductibilité (R1).** Après `vagrant destroy -f obs` puis `vagrant up`, le mot de passe administrateur de `.env` est appliqué et le tableau de bord est présent sans aucune manipulation.
+
+**Difficultés rencontrées.** Trois défauts empêchaient E2 de fonctionner et ont été corrigés : le test de présence de l'exporteur HAProxy échouait à tort (`grep -q` sous `pipefail` provoquait la fin en erreur de `haproxy -vv`) ; le mot de passe administrateur de Grafana n'était jamais appliqué (commande lancée sans les chemins d'installation, échec masqué) ; le tableau de bord, lu dans le dossier partagé `/vagrant`, n'était pas chargé (il est désormais copié dans `/etc/grafana/dashboards/resultats-bf`).
+
+![Grafana pendant V3](captures/grafana_v3_charge.png)
+*Figure 8 — Tableau de bord pendant V3 : le débit monte jusqu'à environ 50 req/s et le processeur de bdd1 (bleu) atteint 100 %.*
+
+![Grafana pendant la panne d'app1](captures/grafana_v2_panne_app1.png)
+*Figure 9 — Pendant V2 : un seul serveur en service ; app1 hors service (rouge) selon la sonde HAProxy et selon Prometheus.*
+
+![Grafana après le retour d'app1](captures/grafana_v2_retour_app1.png)
+*Figure 10 — Après la relance d'app1 : deux serveurs en service ; les frises gardent la trace de la coupure.*
 
 ---
 

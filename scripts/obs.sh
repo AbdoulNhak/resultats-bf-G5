@@ -32,10 +32,14 @@ print("global:\n  scrape_interval: 5s\n  evaluation_interval: 5s\n")
 print("scrape_configs:")
 print("  - job_name: noeuds")
 print("    static_configs:")
-print("      - targets: [" + ", ".join(f"'{n['ip']}:9100'" for n in noeuds) + "]")
+for n in noeuds:
+    print(f"      - targets: ['{n['ip']}:9100']")
+    print(f"        labels: {{vm: '{n['nom']}'}}")
 print("  - job_name: haproxy")
 print("    static_configs:")
-print("      - targets: [" + ", ".join(f"'{n['ip']}:8405'" for n in lbs) + "]")
+for n in lbs:
+    print(f"      - targets: ['{n['ip']}:8405']")
+    print(f"        labels: {{vm: '{n['nom']}'}}")
 PY
 installer_fichier "$tmp" /etc/prometheus/prometheus.yml && systemctl restart prometheus || true
 
@@ -51,6 +55,15 @@ datasources:
 EOF
 installer_fichier "$tmp" /etc/grafana/provisioning/datasources/resultats.yml 644 root:grafana && G=1 || true
 
+# Tableaux de bord copiés hors du dossier partagé /vagrant (lu de façon peu fiable
+# par Grafana) ; un fichier n'est remplacé que s'il a changé (R2).
+install -d -o root -g grafana -m 755 /etc/grafana/dashboards/resultats-bf
+for f in /vagrant/config/grafana/dashboards/*.json; do
+  [ -e "$f" ] || continue
+  tmp=$(mktemp); cp "$f" "$tmp"
+  installer_fichier "$tmp" "/etc/grafana/dashboards/resultats-bf/$(basename "$f")" 644 root:grafana && G=1 || true
+done
+
 tmp=$(mktemp)
 cat > "$tmp" <<'EOF'
 apiVersion: 1
@@ -59,7 +72,7 @@ providers:
     folder: RÉSULTATS-BF
     type: file
     options:
-      path: /vagrant/config/grafana/dashboards
+      path: /etc/grafana/dashboards/resultats-bf
 EOF
 installer_fichier "$tmp" /etc/grafana/provisioning/dashboards/resultats.yml 644 root:grafana && G=1 || true
 
@@ -67,6 +80,16 @@ systemctl enable --quiet prometheus grafana-server
 if [ "${G:-0}" = "1" ]; then systemctl restart grafana-server; else systemctl start grafana-server; fi
 
 attendre_port 127.0.0.1 3000 90
-grafana-cli admin reset-admin-password "$GRAFANA_ADMIN_PASSWORD" >/dev/null 2>&1 || true
+# Réinitialisation du mot de passe administrateur Grafana :
+# - lancée sous le compte grafana (ne change pas le propriétaire de grafana.db),
+# - depuis /usr/share/grafana (le compte grafana ne peut pas lire /home/vagrant),
+# - avec les chemins d'installation (sinon grafana cli échoue sans rien dire).
+GRAFANA_CLI="grafana cli"; command -v grafana >/dev/null 2>&1 || GRAFANA_CLI="grafana-cli"
+if (cd /usr/share/grafana && sudo -u grafana $GRAFANA_CLI --homepath /usr/share/grafana \
+      --config /etc/grafana/grafana.ini admin reset-admin-password "$GRAFANA_ADMIN_PASSWORD") >/dev/null 2>&1; then
+  journal "mot de passe administrateur Grafana appliqué"
+else
+  journal "ATTENTION : mot de passe administrateur Grafana non appliqué"
+fi
 
 journal "supervision prête : Grafana http://${MON_IP}:3000"

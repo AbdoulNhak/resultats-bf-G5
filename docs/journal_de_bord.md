@@ -57,6 +57,9 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 25/10 | V5 : premier contrôle de `/sante` sans réponse en 2 s (code 000) juste après la reconstruction, `/resultat` à 200 l'instant d'après | Résultat publié tel quel et expliqué (dossier 9.6) ; reconstruction validée par le test d'idempotence qui a suivi | A |
 | 26/10 | Ticket 23 : pare-feu jamais testé ; premier V1 avec pare-feu à 12/8 (écart 40 %) | Pare-feu activé (`PAREFEU=1`) et vérifié sur les 6 VM ; V1, V2, V4, V6 rejoués et conformes. Journal HAProxy du premier V1 : 20 requêtes à 200, aucune relance, 4 premières vers app1 puis alternance (état interne du tour de rôle, pas un échec) ; deux répétitions à 10/10. Pare-feu laissé désactivé par défaut | A (ticket 23 du rôle B) |
 | 26/10 | Tickets 5 et 11 du rôle B non vérifiés : redémarrage automatique du service, retour de la base sans redémarrer l'application | Vérifiés : processus tué relancé par systemd (PID 2508 → 4460) ; base arrêtée puis relancée : `/sante` 200 → 503 JSON → 200 sans redémarrage de l'application (dossier, section 5) | A (tickets 5 et 11 du rôle B) |
+| 26/10 | E2 : aucune métrique HAProxy alors que l'exporteur est disponible | `lb.sh` testait `haproxy -vv \| grep -q PROMEX` ; avec `pipefail`, `grep -q` provoquait la fin en erreur de `haproxy -vv` (SIGPIPE) et le test échouait à tort ; remplacé par un test sur la sortie capturée | A |
+| 26/10 | E2 : connexion impossible à Grafana avec le mot de passe de `.env` | La réinitialisation du mot de passe échouait sans rien dire ; lancée sous le compte grafana depuis `/usr/share/grafana`, avec les chemins d'installation, résultat affiché | A |
+| 26/10 | E2 : dossier du tableau de bord créé mais vide | Tableau de bord copié dans `/etc/grafana/dashboards/resultats-bf` au lieu d'être lu dans `/vagrant` ; reconstruction de obs vérifiée sans aucune manipulation | A |
 
 ## 4. Bilan
 
@@ -64,7 +67,7 @@ Le projet a abouti à une infrastructure Vagrant reproductible avec un répartit
 Les essais V1 à V6 ont documenté la répartition, les pannes applicative et de base, la reconstruction et la bascule du répartiteur.
 V5 a reconstruit le socle sans intervention manuelle ; le test R2 a confirmé 18 empreintes identiques après deux rejeux.
 L'incident de ports réservés par Windows a été diagnostiqué puis traité par l'attribution de ports SSH libres dans le Vagrantfile.
-L'observabilité E2 reste non finalisée et le pare-feu n'est pas activé par défaut ; ces limites sont consignées dans le dossier d'architecture.
+L'extension E2 (supervision Prometheus et Grafana) a été finalisée et démontrée pendant V2 et V3 ; le pare-feu est validé mais pas activé par défaut.
 
 **Ce que chacun a appris**
 

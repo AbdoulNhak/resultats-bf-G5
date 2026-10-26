@@ -66,7 +66,7 @@ Aucune adresse de serveur applicatif n'est écrite en dur.
 | Passer à 4 serveurs applicatifs (R3) | `NB_APP=4` dans `.env`, puis `vagrant up` |
 | Revenir à 2 serveurs | `NB_APP=4 vagrant destroy -f app3 app4`, puis `NB_APP=2` dans `.env` et `vagrant provision lb1` (détruire AVANT de baisser la valeur) |
 | Activer le répartiteur redondant (E1) | `AVEC_LB2=1` dans `.env`, puis `vagrant up` |
-| Activer la supervision (E2) | `AVEC_OBS=1` dans `.env`, puis `vagrant up` et http://192.168.60.41:3000 (extension non finalisée : pas de tableau de bord) |
+| Activer la supervision (E2) | `AVEC_OBS=1` dans `.env`, puis `vagrant up` et http://192.168.60.41:3000 (utilisateur `admin`, mot de passe `GRAFANA_ADMIN_PASSWORD` de `.env` ; tableau de bord « RÉSULTATS-BF — supervision ») |
 | Activer le pare-feu (R8) | `PAREFEU=1` dans `.env`, puis `vagrant up` (validé le 26/10 avec V1, V2, V4 et V6 ; désactivé par défaut) |
 | Rejouer le provisionnement (R2) | `vagrant provision` |
 | Bascule de la base sur bdd2 (R6) | `bash scripts/bascule.sh` |
@@ -99,7 +99,7 @@ Vagrantfile              source unique de vérité (rôle A)
 .env.exemple             modèle des secrets ; .env n'est jamais versionné (rôle B)
 app/app.py               service HTTP sans état (rôle B)
 config/schema.sql        table resultats + 50 000 lignes (rôle C)
-config/grafana/          tableaux de bord provisionnés, E2 non finalisée (rôle D)
+config/grafana/          tableau de bord provisionné, E2 (rôle D)
 scripts/commun.sh        socle commun à toutes les VM (rôle A)
 scripts/lib.sh           fonctions d'idempotence (rôle A)
 scripts/bdd.sh           PostgreSQL primaire (rôle C)
