@@ -4,10 +4,10 @@
 
 | Membre | Rôle |
 |---|---|
-| … | A - Architecte réseau, répartition et intégration |
-| … | B - Ingénieur applicatif, sécurité et documentation |
-| … | C - Ingénieur données |
-| … | D - Essais et observabilité |
+| NACANABO Cheick A-Hak | A - Architecte réseau, répartition et intégration |
+| SIMPORE Carine (Leslie) | B - Ingénieur applicatif, sécurité et documentation |
+| TAO Abdoul Aziz | C - Ingénieur données |
+| SAOURA Pingwendé Audrey | D - Essais et observabilité |
 
 ---
 

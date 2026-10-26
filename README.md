@@ -173,6 +173,6 @@ jamais de données PostgreSQL dans `/vagrant`.
 | Rôle | Membre |
 |---|---|
 | A - Architecte réseau, répartition et intégration | NACANABO Cheick A-Hak |
-| B - Ingénieur applicatif, sécurité et documentation | SIMPORE Carine (Leslie)|
+| B - Ingénieur applicatif, sécurité et documentation | SIMPORE Carine (Leslie) |
 | C - Ingénieur données | TAO Abdoul Aziz |
 | D - Essais et observabilité | SAOURA Pingwendé Audrey |
