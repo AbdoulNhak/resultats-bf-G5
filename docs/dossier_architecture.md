@@ -184,6 +184,15 @@ Ajouter un serveur est donc trivial et en retirer un est indolore.
 réponse 503 JSON lisible. Le service est géré par systemd (`Restart=always`)
 et écoute sur `0.0.0.0:5000` pour être joignable depuis lb1.
 
+**Vérifications du 26/10/2026** (rôle A, tickets 5 et 11 du rôle B) :
+
+| Vérification | Commande | Résultat |
+|---|---|---|
+| Redémarrage automatique du service (`Restart=always`) | `vagrant ssh app1 -c "systemctl show resultats -p MainPID; sudo systemctl kill resultats; sleep 4; systemctl is-active resultats; systemctl show resultats -p MainPID"` | `MainPID=2508`, puis `active` et `MainPID=4460` : le processus tué a été relancé par systemd en moins de 4 s |
+| Base arrêtée puis relancée, sans toucher à l'application | `systemctl stop postgresql` puis `start` sur bdd1, `/sante` interrogé avant, pendant et après | 200, puis 503 JSON (`{"statut":"indisponible","message":"Service momentanement indisponible, reessayez dans un instant."}`), puis de nouveau 200 |
+
+Pendant l'arrêt de PostgreSQL, la sonde `/sante` a écarté les deux serveurs applicatifs : la réponse 503 est alors la page de secours JSON de HAProxy, jamais une page blanche (R4). Au retour de la base, `/sante` est revenu à 200 sans redémarrage de l'application : le dernier démarrage du service sur app1 (`ActiveEnterTimestamp=Mon 2026-10-26 08:59:14 GMT`) est celui provoqué par la vérification précédente.
+
 **Réponses réelles** relevées le 25/10/2026 via le répartiteur (http://192.168.60.11) :
 
 | Requête | Code | Réponse |
