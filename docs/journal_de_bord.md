@@ -56,6 +56,7 @@ où l'enseignant interroge n'importe quel membre sur n'importe quelle partie.
 | 25/10 | `tests/idempotence.sh` s'arrêtait sans rapport : le comptage SQL échouait sur les VM sans PostgreSQL et `set -e` coupait le script | Commandes distantes rendues tolérantes (`; true`, `|| true`), échec réel de `vagrant provision` affiché, progression visible ; résultat : OK, 18 empreintes identiques | A (ticket 16 du rôle D) |
 | 25/10 | V5 : premier contrôle de `/sante` sans réponse en 2 s (code 000) juste après la reconstruction, `/resultat` à 200 l'instant d'après | Résultat publié tel quel et expliqué (dossier 9.6) ; reconstruction validée par le test d'idempotence qui a suivi | A |
 | 26/10 | Ticket 23 : pare-feu jamais testé ; premier V1 avec pare-feu à 12/8 (écart 40 %) | Pare-feu activé (`PAREFEU=1`) et vérifié sur les 6 VM ; V1, V2, V4, V6 rejoués et conformes. Journal HAProxy du premier V1 : 20 requêtes à 200, aucune relance, 4 premières vers app1 puis alternance (état interne du tour de rôle, pas un échec) ; deux répétitions à 10/10. Pare-feu laissé désactivé par défaut | A (ticket 23 du rôle B) |
+| 26/10 | Tickets 5 et 11 du rôle B non vérifiés : redémarrage automatique du service, retour de la base sans redémarrer l'application | Vérifiés : processus tué relancé par systemd (PID 2508 → 4460) ; base arrêtée puis relancée : `/sante` 200 → 503 JSON → 200 sans redémarrage de l'application (dossier, section 5) | A (tickets 5 et 11 du rôle B) |
 
 ## 4. Bilan
 
